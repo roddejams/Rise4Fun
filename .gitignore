@@ -1,0 +1,5 @@
+.DS_Store
+.idea/*
+*.class
+antlr-4.5.1-complete.jar
+z3
