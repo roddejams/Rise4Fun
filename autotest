@@ -23,7 +23,7 @@ opendir(DIR, $dir);
 }
 
 foreach my $file (@files) {
-    my $output = qx/.\/srtool $file/;
+    my $output = qx/.\/srtool . $file 2>\/dev\/null/;
     if ($file =~ m/tests\/correct/) {
         $total_correct++;
         if ($output =~ /^CORRECT/m) {
