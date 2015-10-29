@@ -45,7 +45,7 @@ public class SRTool {
             // prints for testing
             //System.err.println(vc);
 
-			ProcessExec process = new ProcessExec("./z3", "-smt2", "-in");
+			ProcessExec process = new ProcessExec("z3", "-smt2", "-in");
 			String queryResult = "";
 			try {
 				queryResult = process.execute(vc, TIMEOUT);
