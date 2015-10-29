@@ -43,7 +43,7 @@ public class SRTool {
 			String vc = vcgen.generateVC().toString();
 
             // prints for testing
-            System.out.println(vc);
+            System.err.println(vc);
 
 			ProcessExec process = new ProcessExec("./z3", "-smt2", "-in");
 			String queryResult = "";
