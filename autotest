@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+my $correct = 0;
+my $incorrect = 0;
+my $total_correct = 0;
+my $total_incorrect = 0;
+
+my @files;
+my @failed;
+
+# Build stuff
+qx/.\/build.sh/;
+
+foreach my $dir (qw(./tests/correct ./tests/incorrect)) {
+opendir(DIR, $dir);
+    while (my $file = readdir(DIR)) {
+        next if $file =~ m/^\./;
+        push @files, "$dir/$file";
+    }
+}
+
+foreach my $file (@files) {
+    my $output = qx/.\/srtool $file/;
+    if ($file =~ m/tests\/correct/) {
+        $total_correct++;
+        if ($output =~ /^CORRECT/m) {
+            print "$file passed test\n";
+            $correct++;
+        } else {
+            print "$file failed test\n";
+            push @failed, $file;
+        }
+    } else {
+        $total_incorrect++;
+        if ($output =~ /^INCORRECT/m) {
+            print "$file passed test\n";
+            $incorrect++;
+        } else {
+            print "$file failed test\n";
+            push @failed, $file;
+        }
+    }
+}
+print "CORRECT: $correct/$total_correct\n";
+print "INCORRECT: $incorrect/$total_incorrect\n";
+print ("FAILED TESTS:\n" . join("\n", @failed) . "\n") unless ($correct eq $total_correct and $incorrect eq $total_incorrect);
