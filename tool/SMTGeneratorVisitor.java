@@ -61,6 +61,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     private Set<String> globals;
     private Set<String> asserts;
     private Set<String> assumptions;
+    private Scopes scopes;
 
     public SMTGeneratorVisitor(Set<String> globals) {
         this.globals = globals;
@@ -74,6 +75,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         predicates = new Stack<>();
         predicates.push("true");
+
+        scopes = new Scopes();
+        scopes.openScope();
     }
 
     private Integer fresh(String varName) {
@@ -148,9 +152,10 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     }
 
     private String declareVar(String var) {
-        int varId = fresh(var);
-        mapping.put(var, varId);
-        return "(declare-fun " + var + varId + " () (_ BitVec 32))";
+        String varName = scopes.add(var);
+        int varId = fresh(varName);
+        mapping.put(varName, varId);
+        return "(declare-fun " + varName + varId + " () (_ BitVec 32))";
     }
 
     private String generateAsserts() {
@@ -251,11 +256,12 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         String visitedRhs = visit(ctx.rhs);
         String rhs = isIntegerExpr.pop() ? visitedRhs : String.format("(tobv32 %s)", visitedRhs);
 
-        int newId = fresh(ctx.lhs.ident.getText());
-        mapping.put(ctx.lhs.ident.getText(), newId);
+        String varName = scopes.getVariable(ctx.lhs.ident.getText());
+        int newId = fresh(varName);
+        mapping.put(varName, newId);
 
-        String varDecl = "(declare-fun " + ctx.lhs.ident.getText() + newId + " () (_ BitVec 32))\n";
-        return varDecl + "(assert (= " + ctx.lhs.ident.getText() + newId + " " + rhs + "))";
+        String varDecl = "(declare-fun " + varName + newId + " () (_ BitVec 32))\n";
+        return varDecl + "(assert (= " + varName + newId + " " + rhs + "))";
     }
 
     @Override
@@ -324,7 +330,10 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
-        return declareVar(ctx.var.ident.getText());
+        String varName = ctx.var.ident.getText();
+        int varId = fresh(varName);
+        mapping.put(varName, varId);
+        return "(declare-fun " + varName + varId + " () (_ BitVec 32))";
     }
 
     @Override
@@ -342,7 +351,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         mapping = ifMap;
 
         predicates.push(newPred);
+        scopes.openScope();
         expr += visit(ctx.thenBlock);
+        scopes.closeScope();
         predicates.pop();
         ifMap = mapping;
 
@@ -350,7 +361,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             mapping = elseMap;
 
             predicates.push(String.format("(not %s)", newPred));
+            scopes.openScope();
             expr += visit(ctx.elseBlock);
+            scopes.closeScope();
             predicates.pop();
             elseMap = mapping;
         }
@@ -702,7 +715,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             isIntegerExpr.push(true);
             checkingAssignmentType = false;
         }
-        String varName = ctx.var.ident.getText();
+        String varName = scopes.getVariable(ctx.var.ident.getText());
         return varName + mapping.get(varName);
     }
 
