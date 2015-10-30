@@ -144,6 +144,12 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         return expr.equals("!=");
     }
 
+    private String getScopeFreeVar(String varName) {
+        int varId = fresh(varName);
+        mapping.put(varName, varId);
+        return "(declare-fun " + varName + varId + " () (_ BitVec 32))";
+    }
+
     private String declareVar(String var) {
         String varName = scopes.add(var);
         int varId = fresh(varName);
@@ -367,7 +373,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         // apply the modset difference
         for (String var : calculateModset(originalMap, ifMap, elseMap)) {
-            expr += declareVar(var);
+            expr += getScopeFreeVar(var);//declareVar(var);
             expr += "\n";
             String ifVar = ifMap.get(var) != null ? var+ifMap.get(var) : "(_ bv0 32)";
             String elseVar = elseMap.get(var) != null ? var+elseMap.get(var) : "(_ bv0 32)";
