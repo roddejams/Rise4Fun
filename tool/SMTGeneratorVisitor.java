@@ -20,7 +20,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     private boolean checkingIfLogicExpr;
     private Stack<Boolean> isLogicExpr;
 
-    private boolean checkingAssignmentType;
+    private boolean checkingIfIntegerExpr;
     private Stack<Boolean> isIntegerExpr;
 
     private String result = "";
@@ -49,10 +49,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         smtBinFuncs.put("%", "ite (= %s (_ bv0 32)) %s (bvmod %s %s)");
 
         // fill in unMap
-        smtUnaryFuncs.put("+", "");
-        smtUnaryFuncs.put("-", "bvsub (_ bv0 32) ");
-        smtUnaryFuncs.put("!", "not ");
-        smtUnaryFuncs.put("~", "bvnot ");
+
     }
 
     private Map<String, Integer> mapping = new HashMap<>();
@@ -98,13 +95,13 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         for(ParserRuleContext ctx : ctxs) {
             if (numOps > idx) {
-                checkingAssignmentType = true;
+                checkingIfIntegerExpr = true;
                 String visitedExpr = visit(ctx);
                 String arg = isIntegerExpr.pop() ? visitedExpr : String.format("(tobv32 %s)", visitedExpr);
                 expr += "(" + String.format(smtBinFuncs.get(opstrs.get(idx)), arg) + " ";
                 ++idx;
             } else {
-                checkingAssignmentType = true;
+                checkingIfIntegerExpr = true;
                 String visitedExpr = visit(ctx);
                 expr += isIntegerExpr.pop() ? visitedExpr : String.format("(tobv32 %s)", visitedExpr);
                 if (isNotExpression(opstrs.get(idx - 1))) {
@@ -252,7 +249,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     @Override
     public String visitAssignStmt(SimpleCParser.AssignStmtContext ctx) {
 
-        checkingAssignmentType = true;
+        checkingIfIntegerExpr = true;
         String visitedRhs = visit(ctx.rhs);
         String rhs = isIntegerExpr.pop() ? visitedRhs : String.format("(tobv32 %s)", visitedRhs);
 
@@ -441,9 +438,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 isLogicExpr.push(false);
                 checkingIfLogicExpr = false;
             }
-            if(checkingAssignmentType) {
+            if(checkingIfIntegerExpr) {
                 isIntegerExpr.push(true);
-                checkingAssignmentType = false;
+                checkingIfIntegerExpr = false;
             }
             expr += generateIte(ctx.args);
         }
@@ -460,9 +457,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 isLogicExpr.push(true);
                 checkingIfLogicExpr = false;
             }
-            if(checkingAssignmentType) {
+            if(checkingIfIntegerExpr) {
                 isIntegerExpr.push(false);
-                checkingAssignmentType = false;
+                checkingIfIntegerExpr = false;
             }
             expr = generateLogicalExpr(ctx.args, ctx.ops);
         }
@@ -479,9 +476,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 isLogicExpr.push(true);
                 checkingIfLogicExpr = false;
             }
-            if(checkingAssignmentType) {
+            if(checkingIfIntegerExpr) {
                 isIntegerExpr.push(false);
-                checkingAssignmentType = false;
+                checkingIfIntegerExpr = false;
             }
             expr = generateLogicalExpr(ctx.args, ctx.ops);
         }
@@ -498,9 +495,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 isLogicExpr.push(false);
                 checkingIfLogicExpr = false;
             }
-            if(checkingAssignmentType) {
+            if(checkingIfIntegerExpr) {
                 isIntegerExpr.push(true);
-                checkingAssignmentType = false;
+                checkingIfIntegerExpr = false;
             }
             expr = generateExpr(ctx.args, ctx.ops);
         }
@@ -517,9 +514,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 isLogicExpr.push(false);
                 checkingIfLogicExpr = false;
             }
-            if(checkingAssignmentType) {
+            if(checkingIfIntegerExpr) {
                 isIntegerExpr.push(true);
-                checkingAssignmentType = false;
+                checkingIfIntegerExpr = false;
             }
             expr = generateExpr(ctx.args, ctx.ops);
         }
@@ -536,9 +533,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 isLogicExpr.push(false);
                 checkingIfLogicExpr = false;
             }
-            if(checkingAssignmentType) {
+            if(checkingIfIntegerExpr) {
                 isIntegerExpr.push(true);
-                checkingAssignmentType = false;
+                checkingIfIntegerExpr = false;
             }
             expr = generateExpr(ctx.args, ctx.ops);
         }
@@ -555,9 +552,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 isLogicExpr.push(true);
                 checkingIfLogicExpr = false;
             }
-            if(checkingAssignmentType) {
+            if(checkingIfIntegerExpr) {
                 isIntegerExpr.push(false);
-                checkingAssignmentType = false;
+                checkingIfIntegerExpr = false;
             }
             expr = generateExpr(ctx.args, ctx.ops);
         }
@@ -574,9 +571,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 isLogicExpr.push(true);
                 checkingIfLogicExpr = false;
             }
-            if(checkingAssignmentType) {
+            if(checkingIfIntegerExpr) {
                 isIntegerExpr.push(false);
-                checkingAssignmentType = false;
+                checkingIfIntegerExpr = false;
             }
             expr = generateExpr(ctx.args, ctx.ops);
         }
@@ -593,9 +590,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 isLogicExpr.push(false);
                 checkingIfLogicExpr = false;
             }
-            if(checkingAssignmentType) {
+            if(checkingIfIntegerExpr) {
                 isIntegerExpr.push(true);
-                checkingAssignmentType = false;
+                checkingIfIntegerExpr = false;
             }
             expr = generateMulShiftExpr(ctx.args, ctx.ops);
         }
@@ -612,9 +609,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 isLogicExpr.push(false);
                 checkingIfLogicExpr = false;
             }
-            if(checkingAssignmentType) {
+            if(checkingIfIntegerExpr) {
                 isIntegerExpr.push(true);
-                checkingAssignmentType = false;
+                checkingIfIntegerExpr = false;
             }
             expr = generateExpr(ctx.args, ctx.ops);
         }
@@ -631,9 +628,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 isLogicExpr.push(false);
                 checkingIfLogicExpr = false;
             }
-            if (checkingAssignmentType) {
+            if (checkingIfIntegerExpr) {
                 isIntegerExpr.push(true);
-                checkingAssignmentType = false;
+                checkingIfIntegerExpr = false;
             }
             expr = generateMulShiftExpr(ctx.args, ctx.ops);
         }
@@ -667,25 +664,93 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     }
 
 
-    // TODO: potentailly stick in this:
-    /*      if (checkingIfLogicExpr) {
-                isLogicExpr = false;
-                checkingIfLogicExpr = false;
-            }
-    */
     @Override
     public String visitUnaryExpr(SimpleCParser.UnaryExprContext ctx) {
         String expr = "";
         if (ctx.single != null) {
             expr = visit(ctx.single);
         } else {
-            for (Token op : ctx.ops ) {
-                expr += "( " + smtUnaryFuncs.get(op.getText());
+            String closingBrackets = "";
+            if (checkingIfLogicExpr) {
+                isLogicExpr.push(ctx.ops.get(0).getText().equals("!"));
+                checkingIfLogicExpr = false;
             }
-            expr += visit(ctx.arg);
+            if (checkingIfIntegerExpr) {
+                isIntegerExpr.push(!ctx.ops.get(0).getText().equals("!"));
+                checkingIfLogicExpr = false;
+            }
             for (int i = 0; i < ctx.ops.size(); ++i) {
-                expr += ")";
+                String op = ctx.ops.get(i).getText();
+                Boolean lastOp = false;
+                String nextOp = "";
+                try {
+                    nextOp = ctx.ops.get(i + 1).getText();
+                } catch (IndexOutOfBoundsException e) {
+                    lastOp = true;
+                }
+                //rise4fun
+                //        smtUnaryFuncs.put("+", "");
+                //        smtUnaryFuncs.put("-", "bvsub (_ bv0 32) ");
+                //        smtUnaryFuncs.put("!", "not %s");
+                //        smtUnaryFuncs.put("~", "bvnot %s");
+                switch (op) {
+                    case "+":
+                        if (!lastOp) {
+                            if (nextOp.equals("!")) {
+                                expr += "(tobv32 ";
+                                closingBrackets += ")";
+                            }
+                        } else {
+                            checkingIfIntegerExpr = true;
+                            String visitedExpr = visit(ctx.arg);
+                            expr += isIntegerExpr.pop() ? visitedExpr : String.format("(tobv32 %s)", visitedExpr);
+                        }
+                        break;
+                    case "-":
+                        expr += "(bvsub (_ bv0 32) ";
+                        closingBrackets += ")";
+                        if (!lastOp) {
+                            if (nextOp.equals("!")) {
+                                expr += "(tobv32 ";
+                                closingBrackets += ")";
+                            }
+                        } else {
+                            checkingIfIntegerExpr = true;
+                            String visitedExpr = visit(ctx.arg);
+                            expr += isIntegerExpr.pop() ? visitedExpr : String.format("(tobv32 %s)", visitedExpr);
+                        }
+                        break;
+                    case "!":
+                        expr += "(not ";
+                        closingBrackets += ")";
+                        if (!lastOp) {
+                            if (!nextOp.equals("!")) {
+                                expr += "(tobool ";
+                                closingBrackets += ")";
+                            }
+                        } else {
+                            checkingIfLogicExpr = true;
+                            String visitedExpr = visit(ctx.arg);
+                            expr += isLogicExpr.pop() ? visitedExpr : String.format("(tobool %s)", visitedExpr);
+                        }
+                        break;
+                    case "~":
+                        expr += "(bvnot (_ bv0 32) ";
+                        closingBrackets += ")";
+                        if (!lastOp) {
+                            if (nextOp.equals("!")) {
+                                expr += "(tobv32 ";
+                                closingBrackets += ")";
+                            }
+                        } else {
+                            checkingIfIntegerExpr = true;
+                            String visitedExpr = visit(ctx.arg);
+                            expr += isIntegerExpr.pop() ? visitedExpr : String.format("(tobv32 %s)", visitedExpr);
+                        }
+                        break;
+                }
             }
+            expr += closingBrackets;
         }
         return expr;
     }
@@ -696,9 +761,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             isLogicExpr.push(false);
             checkingIfLogicExpr = false;
         }
-        if(checkingAssignmentType) {
+        if(checkingIfIntegerExpr) {
             isIntegerExpr.push(true);
-            checkingAssignmentType = false;
+            checkingIfIntegerExpr = false;
         }
         return "(_ bv" + ctx.number.getText() + " 32)";
     }
@@ -709,9 +774,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             isLogicExpr.push(false);
             checkingIfLogicExpr = false;
         }
-        if(checkingAssignmentType) {
+        if(checkingIfIntegerExpr) {
             isIntegerExpr.push(true);
-            checkingAssignmentType = false;
+            checkingIfIntegerExpr = false;
         }
         String varName = scopes.getVariable(ctx.var.ident.getText());
         return varName + mapping.get(varName);
@@ -728,9 +793,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             isLogicExpr.push(false);
             checkingIfLogicExpr = false;
         }
-        if(checkingAssignmentType) {
+        if(checkingIfIntegerExpr) {
             isIntegerExpr.push(true);
-            checkingAssignmentType = false;
+            checkingIfIntegerExpr = false;
         }
         return result;
     }
@@ -741,9 +806,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             isLogicExpr.push(false);
             checkingIfLogicExpr = false;
         }
-        if(checkingAssignmentType) {
+        if(checkingIfIntegerExpr) {
             isIntegerExpr.push(true);
-            checkingAssignmentType = false;
+            checkingIfIntegerExpr = false;
         }
         String varName = ctx.arg.ident.getText();
         return varName + oldGlobals.get(varName);
