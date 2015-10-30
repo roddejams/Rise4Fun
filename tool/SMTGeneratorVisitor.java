@@ -330,7 +330,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
-        String varName = ctx.var.ident.getText();
+        String varName = scopes.getVariable(ctx.var.ident.getText());
         int varId = fresh(varName);
         mapping.put(varName, varId);
         return "(declare-fun " + varName + varId + " () (_ BitVec 32))";
