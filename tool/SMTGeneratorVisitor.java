@@ -645,10 +645,17 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         for(int i = 0; i < ctx.size(); ++i) {
             if(opstrs.size() > i) {
                 if (opstrs.get(i).equals("*")) {
-                    expr += "(" + String.format(smtBinFuncs.get(opstrs.get(i)), visit(ctx.get(i))) + " ";
+                    checkingIfIntegerExpr = true;
+                    String visitedExpression = visit(ctx.get(i));
+                    String expression = isIntegerExpr.pop() ? visitedExpression : String.format("(tobv32 %s)", visitedExpression);
+                    expr += "(" + String.format(smtBinFuncs.get(opstrs.get(i)), expression) + " ";
                 } else {
-                    String lhs = visit(ctx.get(i));
-                    String rhs = visit(ctx.get(i + 1));
+                    checkingIfIntegerExpr = true;
+                    String visitedLhs = visit(ctx.get(i));
+                    String lhs = isIntegerExpr.pop() ? visitedLhs : String.format("(tobv32 %s)", visitedLhs);
+                    checkingIfIntegerExpr = true;
+                    String visitedRhs = visit(ctx.get(i + 1));
+                    String rhs = isIntegerExpr.pop() ? visitedRhs : String.format("(tobv32 %s)", visitedRhs);
                     if (opstrs.get(i).equals(">>") || opstrs.get(i).equals("<<")) {
                         expr += "(" + String.format(smtBinFuncs.get(opstrs.get(i)), rhs, "(_ bv0 32)", lhs, rhs) + " ";
                     } else {
@@ -656,7 +663,10 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                     }
                 }
             } else if(opstrs.get(i - 1).equals("*")) {
-                expr += visit(ctx.get(i));
+                checkingIfIntegerExpr = true;
+                String visitedExpression = visit(ctx.get(i));
+                String expression = isIntegerExpr.pop() ? visitedExpression : String.format("(tobv32 %s)", visitedExpression);
+                expr += expression;//visit(ctx.get(i));
             }
         }
         for(int i = 0; i < opstrs.size(); ++i) {
@@ -679,7 +689,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             }
             if (checkingIfIntegerExpr) {
                 isIntegerExpr.push(!ctx.ops.get(0).getText().equals("!"));
-                checkingIfLogicExpr = false;
+                checkingIfIntegerExpr = false;
             }
             for (int i = 0; i < ctx.ops.size(); ++i) {
                 String op = ctx.ops.get(i).getText();
