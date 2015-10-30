@@ -26,7 +26,6 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     private String result = "";
 
     private static final Map<String, String> smtBinFuncs = new HashMap<>();
-    private static final Map<String, String> smtUnaryFuncs = new HashMap<>();
     static {
         // fill in binMap
         smtBinFuncs.put("||", "or %s");
@@ -47,9 +46,6 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         smtBinFuncs.put("*", "bvmul %s");
         smtBinFuncs.put("/", "ite (= %s (_ bv0 32)) %s (bvsdiv %s %s)");
         smtBinFuncs.put("%", "ite (= %s (_ bv0 32)) %s (bvmod %s %s)");
-
-        // fill in unMap
-
     }
 
     private Map<String, Integer> mapping = new HashMap<>();
@@ -689,10 +685,6 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                     lastOp = true;
                 }
                 //rise4fun
-                //        smtUnaryFuncs.put("+", "");
-                //        smtUnaryFuncs.put("-", "bvsub (_ bv0 32) ");
-                //        smtUnaryFuncs.put("!", "not %s");
-                //        smtUnaryFuncs.put("~", "bvnot %s");
                 switch (op) {
                     case "+":
                         if (!lastOp) {
@@ -735,7 +727,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                         }
                         break;
                     case "~":
-                        expr += "(bvnot (_ bv0 32) ";
+                        expr += "(bvnot ";
                         closingBrackets += ")";
                         if (!lastOp) {
                             if (nextOp.equals("!")) {
