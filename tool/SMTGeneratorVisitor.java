@@ -373,7 +373,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         // apply the modset difference
         for (String var : calculateModset(originalMap, ifMap, elseMap)) {
-            expr += getScopeFreeVar(var);//declareVar(var);
+            expr += getScopeFreeVar(var);
             expr += "\n";
             String ifVar = ifMap.get(var) != null ? var+ifMap.get(var) : "(_ bv0 32)";
             String elseVar = elseMap.get(var) != null ? var+elseMap.get(var) : "(_ bv0 32)";
@@ -413,12 +413,6 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         return modset;
     }
 
-    // a ? b : c ? d : f
-    /*
-    (ite a b ite(c d f)
-    args+=lorExpr ('?' args+=lorExpr ':' args+=lorExpr)+;
-    x = 2 ? 4 : 0 ? 5 : 6 ? 8 : 9;
-     */
     private String generateIte(List<LorExprContext> args) {
         String expr = "";
 
