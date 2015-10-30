@@ -190,6 +190,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             builder.append("\n");
         }
 
+        // proc scope
+        scopes.openScope();
+
         oldGlobals = copyMap(mapping);
 
         for (FormalParamContext procArg : ctx.formals) {
@@ -218,6 +221,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         }
 
         builder.append(generateAsserts());
+
+        scopes.closeScope();
+
         return builder.toString();
     }
 
@@ -699,7 +705,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                         }
                         break;
                     case "-":
-                        expr += "(bvsub (_ bv0 32) ";
+                        expr += "(bvmul #xffffffff ";
                         closingBrackets += ")";
                         if (!lastOp) {
                             if (nextOp.equals("!")) {
