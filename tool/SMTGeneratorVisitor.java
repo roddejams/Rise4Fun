@@ -351,9 +351,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         mapping = ifMap;
 
         predicates.push(newPred);
-        scopes.openScope();
         expr += visit(ctx.thenBlock);
-        scopes.closeScope();
         predicates.pop();
         ifMap = mapping;
 
@@ -361,9 +359,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             mapping = elseMap;
 
             predicates.push(String.format("(not %s)", newPred));
-            scopes.openScope();
             expr += visit(ctx.elseBlock);
-            scopes.closeScope();
             predicates.pop();
             elseMap = mapping;
         }
@@ -385,11 +381,13 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitBlockStmt(SimpleCParser.BlockStmtContext ctx) {
+        scopes.openScope();
         StringBuilder builder = new StringBuilder();
         ctx.stmts.stream().forEach(stmt -> {
             builder.append(visit(stmt));
             builder.append("\n");
         });
+        scopes.closeScope();
         return builder.toString();
     }
 
