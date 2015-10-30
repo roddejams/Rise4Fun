@@ -11,8 +11,6 @@ int f(int x) requires x {
           assume x == 5;
           assert x == 5;
         }
-
-        // this one fails
         assert x == 0;
     }
     assert x;
