@@ -638,17 +638,11 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         for (int i = 0; i < ctx.size(); ++i) {
             if (opstrs.size() > i) {
                 if (opstrs.get(i).equals("*")) {
-                    checkingIfIntegerExpr = true;
-                    String visitedExpression = visit(ctx.get(i));
-                    String expression = isIntegerExpr.pop() ? visitedExpression : String.format("(tobv32 %s)", visitedExpression);
+                    String expression = visitIntegerExpr(ctx.get(i));
                     expr += "(" + String.format(smtBinFuncs.get(opstrs.get(i)), expression) + " ";
                 } else {
-                    checkingIfIntegerExpr = true;
-                    String visitedLhs = visit(ctx.get(i));
-                    String lhs = isIntegerExpr.pop() ? visitedLhs : String.format("(tobv32 %s)", visitedLhs);
-                    checkingIfIntegerExpr = true;
-                    String visitedRhs = visit(ctx.get(i + 1));
-                    String rhs = isIntegerExpr.pop() ? visitedRhs : String.format("(tobv32 %s)", visitedRhs);
+                    String lhs = visitIntegerExpr(ctx.get(i));
+                    String rhs = visitIntegerExpr(ctx.get(i+1));
                     if (opstrs.get(i).equals(">>") || opstrs.get(i).equals("<<")) {
                         expr += "(" + String.format(smtBinFuncs.get(opstrs.get(i)), rhs, "(_ bv0 32)", lhs, rhs) + " ";
                     } else {
@@ -656,10 +650,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                     }
                 }
             } else if (opstrs.get(i - 1).equals("*")) {
-                checkingIfIntegerExpr = true;
-                String visitedExpression = visit(ctx.get(i));
-                String expression = isIntegerExpr.pop() ? visitedExpression : String.format("(tobv32 %s)", visitedExpression);
-                expr += expression;//visit(ctx.get(i));
+                expr += visitIntegerExpr(ctx.get(i));
             }
         }
         for (int i = 0; i < opstrs.size(); ++i) {
@@ -702,9 +693,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                                 closingBrackets += ")";
                             }
                         } else {
-                            checkingIfIntegerExpr = true;
-                            String visitedExpr = visit(ctx.arg);
-                            expr += isIntegerExpr.pop() ? visitedExpr : String.format("(tobv32 %s)", visitedExpr);
+                            expr += visitIntegerExpr(ctx.arg);
                         }
                         break;
                     case "-":
@@ -716,9 +705,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                                 closingBrackets += ")";
                             }
                         } else {
-                            checkingIfIntegerExpr = true;
-                            String visitedExpr = visit(ctx.arg);
-                            expr += isIntegerExpr.pop() ? visitedExpr : String.format("(tobv32 %s)", visitedExpr);
+                            expr += visitIntegerExpr(ctx.arg);
                         }
                         break;
                     case "!":
@@ -730,9 +717,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                                 closingBrackets += ")";
                             }
                         } else {
-                            checkingIfLogicExpr = true;
-                            String visitedExpr = visit(ctx.arg);
-                            expr += isLogicExpr.pop() ? visitedExpr : String.format("(tobool %s)", visitedExpr);
+                            expr += visitLogicalExpr(ctx.arg);
                         }
                         break;
                     case "~":
@@ -744,9 +729,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                                 closingBrackets += ")";
                             }
                         } else {
-                            checkingIfIntegerExpr = true;
-                            String visitedExpr = visit(ctx.arg);
-                            expr += isIntegerExpr.pop() ? visitedExpr : String.format("(tobv32 %s)", visitedExpr);
+                            expr += visitIntegerExpr(ctx.arg);
                         }
                         break;
                 }
