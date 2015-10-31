@@ -590,30 +590,31 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         return expr;
     }
 
-    private String generateMulShiftExpr(List<? extends ParserRuleContext> ctx, List<Token> ops) {
+    private String generateMulShiftExpr(List<? extends ParserRuleContext> ctxs, List<Token> ops) {
         List<String> opstrs = ops.stream().map(Token::getText).collect(Collectors.toList());
         String expr = "";
-        for (int i = 0; i < ctx.size(); ++i) {
-            if (opstrs.size() > i) {
-                if (opstrs.get(i).equals("*")) {
-                    String expression = visitIntegerExpr(ctx.get(i));
-                    expr += "(" + String.format(smtBinFuncs.get(opstrs.get(i)), expression) + " ";
-                } else {
-                    String lhs = visitIntegerExpr(ctx.get(i));
-                    String rhs = visitIntegerExpr(ctx.get(i+1));
-                    if (opstrs.get(i).equals(">>") || opstrs.get(i).equals("<<")) {
-                        expr += "(" + String.format(smtBinFuncs.get(opstrs.get(i)), rhs, "(_ bv0 32)", lhs, rhs) + " ";
-                    } else {
-                        expr += "(" + String.format(smtBinFuncs.get(opstrs.get(i)), rhs, lhs, lhs, rhs) + " ";
-                    }
-                }
-            } else if (opstrs.get(i - 1).equals("*")) {
-                expr += visitIntegerExpr(ctx.get(i));
-            }
+
+        String lhs;
+        String rhs;
+
+        int opIdx = ops.size() - 1;
+
+        if(ctxs.size() > 2) {
+            lhs = generateMulShiftExpr(ctxs.subList(0, ctxs.size()-1), ops.subList(0, opIdx));
+            rhs = visitIntegerExpr(ctxs.get(ctxs.size() - 1));
+        } else {
+            lhs = visitIntegerExpr(ctxs.get(0));
+            rhs = visitIntegerExpr(ctxs.get(1));
         }
-        for (int i = 0; i < opstrs.size(); ++i) {
-            expr += ")";
+
+        if (opstrs.get(opIdx).equals(">>") || opstrs.get(opIdx).equals("<<")) {
+            expr += "(" + String.format(smtBinFuncs.get(opstrs.get(opIdx)), rhs, "(_ bv0 32)", lhs, rhs) + ")";
+        } else if(opstrs.get(opIdx).equals("/") || opstrs.get(opIdx).equals("%")){
+            expr += "(" + String.format(smtBinFuncs.get(opstrs.get(opIdx)), rhs, lhs, lhs, rhs) + ")";
+        } else if(opstrs.get(opIdx).equals("*")){
+            expr += "(" + String.format(smtBinFuncs.get(opstrs.get(opIdx)), lhs) + " " + rhs + ")";
         }
+
         return expr;
     }
 
