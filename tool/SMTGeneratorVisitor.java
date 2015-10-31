@@ -47,7 +47,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         smtBinFuncs.put("-", "bvsub %s");
         smtBinFuncs.put("*", "bvmul %s");
         smtBinFuncs.put("/", "ite (= %s (_ bv0 32)) %s (bvsdiv %s %s)");
-        smtBinFuncs.put("%", "ite (= %s (_ bv0 32)) %s (bvmod %s %s)");
+        smtBinFuncs.put("%", "ite (= %s (_ bv0 32)) %s (bvsmod %s %s)");
     }
 
     private Map<String, Integer> mapping = new HashMap<>();
