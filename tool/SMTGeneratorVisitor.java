@@ -218,7 +218,8 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
             return assertCheckDefs + expr + assertCheckGets;
         }
-        return "(assert false)";
+        return "(assert false)" +
+                "\n(check-sat)\n";
     }
 
     @Override
@@ -615,7 +616,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         }
         return expr;
     }
-    
+
     @Override
     public String visitUnaryExpr(SimpleCParser.UnaryExprContext ctx) {
         String expr = "";
