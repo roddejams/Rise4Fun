@@ -22,7 +22,7 @@ public class VCGenerator {
 
         result.append(visitor.visitProcedureDecl(proc));
 		
-		result.append("\n(check-sat)\n");
+		//result.append("\n(check-sat)\n");
 		return result;
 	}
 

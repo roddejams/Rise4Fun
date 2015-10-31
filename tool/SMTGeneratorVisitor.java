@@ -188,23 +188,35 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     private String generateAsserts() {
         if (!asserts.isEmpty()) {
             String expr = "(assert (not \n \t";
+            String assertCheckDefs = "";
+            String assertCheckGets = "";
+
             int idx = 0;
             int numAnds = asserts.size() - 1;
 
+            int i = 0;
             for (String assertStmt : asserts) {
+                assertCheckDefs += String.format("(declare-fun assertCheck%s () Bool) \n", i);
+                assertCheckGets += String.format("(get-value ( assertCheck%s ))\n", i);
+
+                assertStmt = String.format("(=> assertCheck%s %s)", i, assertStmt);
+
                 if (numAnds > idx) {
                     expr += "(and " + assertStmt + " ";
                     ++idx;
                 } else {
                     expr += assertStmt;
                 }
+                i++;
             }
-            for (int i = 0; i < numAnds; ++i) {
+            for (int j = 0; j < numAnds; ++j) {
                 expr += ")";
             }
 
             expr += "\n))";
-            return expr;
+            expr += "\n(check-sat)\n";
+
+            return assertCheckDefs + expr + assertCheckGets;
         }
         return "(assert false)";
     }
@@ -577,36 +589,33 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         return expr;
     }
 
-    private String generateMulShiftExpr(List<? extends ParserRuleContext> contexts, List<Token> ops) {
+    private String generateMulShiftExpr(List<? extends ParserRuleContext> ctx, List<Token> ops) {
         List<String> opstrs = ops.stream().map(Token::getText).collect(Collectors.toList());
         String expr = "";
-        int idx = 0;
-        for (ParserRuleContext ctx : contexts) {
-            if (opstrs.size() > idx) {
-                if (opstrs.get(idx).equals("*")) {
-                    String expression = visitIntegerExpr(ctx);
-                    expr += "(" + String.format(smtBinFuncs.get(opstrs.get(idx)), expression) + " ";
+        for (int i = 0; i < ctx.size(); ++i) {
+            if (opstrs.size() > i) {
+                if (opstrs.get(i).equals("*")) {
+                    String expression = visitIntegerExpr(ctx.get(i));
+                    expr += "(" + String.format(smtBinFuncs.get(opstrs.get(i)), expression) + " ";
                 } else {
-                    String lhs = visitIntegerExpr(ctx);
-                    String rhs = visitIntegerExpr(ctx);
-                    if (opstrs.get(idx).equals(">>") || opstrs.get(idx).equals("<<")) {
-                        expr += "(" + String.format(smtBinFuncs.get(opstrs.get(idx)), rhs, "(_ bv0 32)", lhs, rhs) + " ";
+                    String lhs = visitIntegerExpr(ctx.get(i));
+                    String rhs = visitIntegerExpr(ctx.get(i+1));
+                    if (opstrs.get(i).equals(">>") || opstrs.get(i).equals("<<")) {
+                        expr += "(" + String.format(smtBinFuncs.get(opstrs.get(i)), rhs, "(_ bv0 32)", lhs, rhs) + " ";
                     } else {
-                        expr += "(" + String.format(smtBinFuncs.get(opstrs.get(idx)), rhs, lhs, lhs, rhs) + " ";
+                        expr += "(" + String.format(smtBinFuncs.get(opstrs.get(i)), rhs, lhs, lhs, rhs) + " ";
                     }
                 }
-            } else if (opstrs.get(idx - 1).equals("*")) {
-                expr += visitIntegerExpr(ctx);
+            } else if (opstrs.get(i - 1).equals("*")) {
+                expr += visitIntegerExpr(ctx.get(i));
             }
-            idx++;
         }
         for (int i = 0; i < opstrs.size(); ++i) {
             expr += ")";
         }
         return expr;
     }
-
-
+    
     @Override
     public String visitUnaryExpr(SimpleCParser.UnaryExprContext ctx) {
         String expr = "";
