@@ -577,26 +577,28 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         return expr;
     }
 
-    private String generateMulShiftExpr(List<? extends ParserRuleContext> ctx, List<Token> ops) {
+    private String generateMulShiftExpr(List<? extends ParserRuleContext> contexts, List<Token> ops) {
         List<String> opstrs = ops.stream().map(Token::getText).collect(Collectors.toList());
         String expr = "";
-        for (int i = 0; i < ctx.size(); ++i) {
-            if (opstrs.size() > i) {
-                if (opstrs.get(i).equals("*")) {
-                    String expression = visitIntegerExpr(ctx.get(i));
-                    expr += "(" + String.format(smtBinFuncs.get(opstrs.get(i)), expression) + " ";
+        int idx = 0;
+        for (ParserRuleContext ctx : contexts) {
+            if (opstrs.size() > idx) {
+                if (opstrs.get(idx).equals("*")) {
+                    String expression = visitIntegerExpr(ctx);
+                    expr += "(" + String.format(smtBinFuncs.get(opstrs.get(idx)), expression) + " ";
                 } else {
-                    String lhs = visitIntegerExpr(ctx.get(i));
-                    String rhs = visitIntegerExpr(ctx.get(i+1));
-                    if (opstrs.get(i).equals(">>") || opstrs.get(i).equals("<<")) {
-                        expr += "(" + String.format(smtBinFuncs.get(opstrs.get(i)), rhs, "(_ bv0 32)", lhs, rhs) + " ";
+                    String lhs = visitIntegerExpr(ctx);
+                    String rhs = visitIntegerExpr(ctx);
+                    if (opstrs.get(idx).equals(">>") || opstrs.get(idx).equals("<<")) {
+                        expr += "(" + String.format(smtBinFuncs.get(opstrs.get(idx)), rhs, "(_ bv0 32)", lhs, rhs) + " ";
                     } else {
-                        expr += "(" + String.format(smtBinFuncs.get(opstrs.get(i)), rhs, lhs, lhs, rhs) + " ";
+                        expr += "(" + String.format(smtBinFuncs.get(opstrs.get(idx)), rhs, lhs, lhs, rhs) + " ";
                     }
                 }
-            } else if (opstrs.get(i - 1).equals("*")) {
-                expr += visitIntegerExpr(ctx.get(i));
+            } else if (opstrs.get(idx - 1).equals("*")) {
+                expr += visitIntegerExpr(ctx);
             }
+            idx++;
         }
         for (int i = 0; i < opstrs.size(); ++i) {
             expr += ")";
