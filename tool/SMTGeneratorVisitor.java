@@ -84,6 +84,18 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         return currentVal;
     }
 
+    private String visitIntegerExpr(ParserRuleContext ctx) {
+        checkingIfIntegerExpr = true;
+        String visitedExpr = visit(ctx);
+        return isIntegerExpr.pop() ? visitedExpr : String.format("(tobv32 %s)", visitedExpr);
+    }
+
+    private String visitLogicalExpr(ParserRuleContext ctx) {
+        checkingIfLogicExpr = true;
+        String visitedExpr = visit(ctx);
+        return isLogicExpr.pop() ? visitedExpr : String.format("(tobool %s)", visitedExpr);
+    }
+
     private String generateExpr(List<? extends ParserRuleContext> ctxs, List<Token> ops) {
 
         List<String> opstrs = ops.stream().map(Token::getText).collect(Collectors.toList());
@@ -93,15 +105,11 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         for (ParserRuleContext ctx : ctxs) {
             if (numOps > idx) {
-                checkingIfIntegerExpr = true;
-                String visitedExpr = visit(ctx);
-                String arg = isIntegerExpr.pop() ? visitedExpr : String.format("(tobv32 %s)", visitedExpr);
+                String arg = visitIntegerExpr(ctx);
                 expr += "(" + String.format(smtBinFuncs.get(opstrs.get(idx)), arg) + " ";
                 ++idx;
             } else {
-                checkingIfIntegerExpr = true;
-                String visitedExpr = visit(ctx);
-                expr += isIntegerExpr.pop() ? visitedExpr : String.format("(tobv32 %s)", visitedExpr);
+                expr += visitIntegerExpr(ctx);
                 if (isNotExpression(opstrs.get(idx - 1))) {
                     expr += ")";
                 }
@@ -122,15 +130,11 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         for (ParserRuleContext ctx : ctxs) {
             if (numOps > idx) {
-                checkingIfLogicExpr = true;
-                String visitedExpr = visit(ctx);
-                String arg = isLogicExpr.pop() ? visitedExpr : String.format("(tobool %s)", visitedExpr);
+                String arg = visitLogicalExpr(ctx);
                 expr += "(" + String.format(smtBinFuncs.get(opstrs.get(idx)), arg) + " ";
                 ++idx;
             } else {
-                checkingIfLogicExpr = true;
-                String visitedExpr = visit(ctx);
-                expr += isLogicExpr.pop() ? visitedExpr : String.format("(tobool %s)", visitedExpr);
+                expr += visitLogicalExpr(ctx);
                 if (isNotExpression(opstrs.get(idx - 1))) {
                     expr += ")";
                 }
@@ -239,9 +243,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitRequires(SimpleCParser.RequiresContext ctx) {
-        checkingIfLogicExpr = true;
-        String visitedCondition = visit(ctx.condition);
-        String requiredCondition = isLogicExpr.pop() ? visitedCondition : String.format("(tobool %s)", visitedCondition);
+        String requiredCondition = visitLogicalExpr(ctx.condition);
 
         assumptions.add(requiredCondition);
         return "";
@@ -249,10 +251,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitEnsures(SimpleCParser.EnsuresContext ctx) {
-        checkingIfLogicExpr = true;
-        String visitedCondition = visit(ctx.condition);
-        String ensuredCondition = isLogicExpr.pop() ? visitedCondition : String.format("(tobool %s)", visitedCondition);
-
+        String ensuredCondition = visitLogicalExpr(ctx.condition);
         String assumeWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), ensuredCondition);
         asserts.add(assumeWithPred);
         return "";
@@ -261,9 +260,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     @Override
     public String visitAssignStmt(SimpleCParser.AssignStmtContext ctx) {
 
-        checkingIfIntegerExpr = true;
-        String visitedRhs = visit(ctx.rhs);
-        String rhs = isIntegerExpr.pop() ? visitedRhs : String.format("(tobv32 %s)", visitedRhs);
+        String rhs = visitIntegerExpr(ctx.rhs);
 
         String varName = scopes.getVariable(ctx.lhs.ident.getText());
         int newId = fresh(varName);
@@ -275,9 +272,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitAssertStmt(SimpleCParser.AssertStmtContext ctx) {
-        checkingIfLogicExpr = true;
-        String visitedCondition = visit(ctx.condition);
-        String assertCondition = isLogicExpr.pop() ? visitedCondition : String.format("(tobool %s)", visitedCondition);
+        String assertCondition = visitLogicalExpr(ctx.condition);
 
         String assertWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), assertCondition);
         asserts.add(assertWithPred);
@@ -286,9 +281,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitAssumeStmt(SimpleCParser.AssumeStmtContext ctx) {
-        checkingIfLogicExpr = true;
-        String visitedCondition = visit(ctx.condition);
-        String assumeCondition = isLogicExpr.pop() ? visitedCondition : String.format("(tobool %s)", visitedCondition);
+        String assumeCondition = visitLogicalExpr(ctx.condition);
 
         String assumeWithPred = String.format("(=> %s %s)", buildPredicate(), assumeCondition);
         assumptions.add(assumeWithPred);
@@ -349,9 +342,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     public String visitIfStmt(SimpleCParser.IfStmtContext ctx) {
         String expr = "";
 
-        checkingIfLogicExpr = true;
-        String newPred = visit(ctx.condition);
-        newPred = isLogicExpr.pop() ? newPred : String.format("(tobool %s)", newPred);
+        String newPred = visitLogicalExpr(ctx.condition);
 
         Map<String, Integer> originalMap = copyMap(mapping);
         Map<String, Integer> ifMap = copyMap(mapping);
@@ -420,9 +411,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     private String generateIte(List<LorExprContext> args) {
         String expr = "";
 
-        checkingIfLogicExpr = true;
-        String visitedExpr = visit(args.get(0));
-        String iteCond = isLogicExpr.pop() ? visitedExpr : String.format("(tobool %s)", visitedExpr);
+        String iteCond = visitLogicalExpr(args.get(0));
 
         expr += "(ite " + iteCond + " " + visit(args.get(1)) + " ";
         if (args.size() > 3) {
