@@ -3,7 +3,5 @@ int f()
 {
     int x;
     x = 1;
-    int k;
-    k = !x << 3;
-    return k;
+    return !x << 3;
 }
