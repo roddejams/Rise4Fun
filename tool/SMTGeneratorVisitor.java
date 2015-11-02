@@ -195,6 +195,12 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             int numAnds = asserts.size() - 1;
 
             int i = 0;
+
+            //Check for global variables named assertCheck to avoid clash
+            if(mapping.containsKey("assertCheck")) {
+                i = mapping.get("assertCheck") + 1;
+            }
+
             for (String assertStmt : asserts) {
                 assertCheckDefs += String.format("(declare-fun assertCheck%s () Bool) \n", i);
                 assertCheckGets += String.format("(get-value ( assertCheck%s ))\n", i);
