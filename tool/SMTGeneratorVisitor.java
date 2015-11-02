@@ -24,6 +24,10 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     private boolean checkingIfIntegerExpr;
     private final Stack<Boolean> isIntegerExpr;
 
+    private boolean inCallSummarisation;
+    private Map<String, String> functionArgumentMap = new HashMap<>();
+    private String functionReturnTemp;
+
     private String result = "";
     private boolean resultIsLogicExpr;
 
@@ -181,7 +185,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         int opIdx = ops.size() - 1;
 
         if(ctxs.size() > 2) {
-            lhs = generateLogicalExpr(ctxs.subList(0, ctxs.size()-1), ops.subList(0, opIdx));
+            lhs = generateLogicalExpr(ctxs.subList(0, ctxs.size() - 1), ops.subList(0, opIdx));
             rhs = visitLogicalExpr(ctxs.get(ctxs.size() - 1));
         } else {
             lhs = visitLogicalExpr(ctxs.get(0));
@@ -203,14 +207,14 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     private String getScopeFreeVar(String varName) {
         int varId = fresh(varName);
         mapping.put(varName, varId);
-        return "(declare-fun " + varName + varId + " () (_ BitVec 32))";
+        return "(declare-fun " + varName + varId + " () (_ BitVec 32))\n";
     }
 
     private String declareVar(String var) {
         String varName = scopes.add(var);
         int varId = fresh(varName);
         mapping.put(varName, varId);
-        return "(declare-fun " + varName + varId + " () (_ BitVec 32))";
+        return "(declare-fun " + varName + varId + " () (_ BitVec 32))\n";
     }
 
     private String generateAsserts() {
@@ -316,15 +320,25 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     public String visitRequires(SimpleCParser.RequiresContext ctx) {
         String requiredCondition = visitLogicalExpr(ctx.condition);
 
-        assumptions.add(requiredCondition);
+        if(inCallSummarisation) {
+            String assumeWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), requiredCondition);
+            asserts.add(assumeWithPred);
+        } else {
+            assumptions.add(requiredCondition);
+        }
         return "";
     }
 
     @Override
     public String visitEnsures(SimpleCParser.EnsuresContext ctx) {
         String ensuredCondition = visitLogicalExpr(ctx.condition);
-        String assumeWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), ensuredCondition);
-        asserts.add(assumeWithPred);
+
+        if(inCallSummarisation) {
+            assumptions.add(ensuredCondition);
+        } else {
+            String assumeWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), ensuredCondition);
+            asserts.add(assumeWithPred);
+        }
         return "";
     }
 
@@ -406,17 +420,58 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         String varName = scopes.getVariable(ctx.var.ident.getText());
         int varId = fresh(varName);
         mapping.put(varName, varId);
-        return "(declare-fun " + varName + varId + " () (_ BitVec 32))";
+        return "(declare-fun " + varName + varId + " () (_ BitVec 32))\n";
     }
 
     @Override
+    //cry inside
+    //cry some more
     public String visitCallStmt(CallStmtContext ctx) {
+
         String expr = "";
         ProcDetail details = procDetails.get(ctx.callee.getText());
 
-        visitLogicalExpr(details.getPreCond().condition);
+        assert details.getArgs().size() == ctx.actuals.size();
 
-        visitLogicalExpr(details.getPostCond().condition);
+        for(int i = 0; i < ctx.actuals.size(); i++) {
+            String actual = visitIntegerExpr(ctx.actuals.get(i));
+            functionArgumentMap.put(details.getArgs().get(i), actual);
+        }
+
+        inCallSummarisation = true;
+        //visit precondition with arguments replaced with actuals
+        if(details.getPreCond() != null) {
+            visit(details.getPreCond());
+        }
+
+        //havoc the modset
+        for(String varName : details.getModset()) {
+            int varId = fresh(varName);
+            mapping.put(varName, varId);
+            expr += "(declare-fun " + varName + varId + " () (_ BitVec 32))\n";
+        }
+
+        //Havoc the temporary return variable
+        functionReturnTemp = ctx.callee.getText() + "_ret";
+        int ret_id = fresh(functionReturnTemp);
+        mapping.put(functionReturnTemp, ret_id);
+        expr += "(declare-fun " + functionReturnTemp + ret_id + " () (_ BitVec 32))\n";
+
+        //visit the postcondition with \result replaced with bar_ret
+        if(details.getPostCond() != null) {
+            visit(details.getPostCond());
+        }
+
+        // Assign the lhs to the temporary return variable
+        String varName = scopes.getVariable(ctx.lhs.ident.getText());
+        int newId = fresh(varName);
+        mapping.put(varName, newId);
+
+        String varDecl = "(declare-fun " + varName + newId + " () (_ BitVec 32))\n";
+        expr += varDecl + "(assert (= " + varName + newId + " " + functionReturnTemp + mapping.get(functionReturnTemp) + "))";
+
+        functionArgumentMap.clear();
+        inCallSummarisation = false;
 
         return expr;
     }
@@ -751,8 +806,17 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     @Override
     public String visitVarrefExpr(SimpleCParser.VarrefExprContext ctx) {
         checkIntegerReturnType();
-        String varName = scopes.getVariable(ctx.var.ident.getText());
-        return varName + mapping.get(varName);
+
+        String varName;
+
+        if(inCallSummarisation) {
+            varName = functionArgumentMap.get(ctx.var.ident.getText());
+            return varName;
+        } else {
+            varName = scopes.getVariable(ctx.var.ident.getText());
+            return varName + mapping.get(varName);
+        }
+
     }
 
     @Override
@@ -767,7 +831,12 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         } else {
             checkIntegerReturnType();
         }
-        return result;
+
+        if(inCallSummarisation) {
+            return functionReturnTemp + mapping.get(functionReturnTemp);
+        } else {
+            return result;
+        }
     }
 
     @Override

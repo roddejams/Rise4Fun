@@ -33,6 +33,8 @@ public class ProcDetail {
         modset.add(var);
     }
 
+    public void addArgument(String arg) { args.add(arg);}
+
     public RequiresContext getPreCond() {
         return preCond;
     }
@@ -43,5 +45,9 @@ public class ProcDetail {
 
     public Set<String> getModset() {
         return modset;
+    }
+
+    public List<String> getArgs() {
+        return args;
     }
 }
