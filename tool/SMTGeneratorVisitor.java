@@ -119,50 +119,74 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     }
 
     private String generateExpr(List<? extends ParserRuleContext> ctxs, List<Token> ops) {
-
         List<String> opstrs = ops.stream().map(Token::getText).collect(Collectors.toList());
         String expr = "";
-        int numOps = ops.size();
-        int idx = 0;
 
-        for (ParserRuleContext ctx : ctxs) {
-            if (numOps > idx) {
-                String arg = visitIntegerExpr(ctx);
-                expr += "(" + String.format(smtBinFuncs.get(opstrs.get(idx)), arg) + " ";
-                ++idx;
-            } else {
-                expr += visitIntegerExpr(ctx);
-                if (isNotExpression(opstrs.get(idx - 1))) {
-                    expr += ")";
-                }
-            }
+        String lhs;
+        String rhs;
+
+        int opIdx = ops.size() - 1;
+
+        if(ctxs.size() > 2) {
+            lhs = generateExpr(ctxs.subList(0, ctxs.size()-1), ops.subList(0, opIdx));
+            rhs = visitIntegerExpr(ctxs.get(ctxs.size() - 1));
+        } else {
+            lhs = visitIntegerExpr(ctxs.get(0));
+            rhs = visitIntegerExpr(ctxs.get(1));
         }
-        for (int i = 0; i < numOps; ++i) {
+
+        expr += "(" + String.format(smtBinFuncs.get(opstrs.get(ops.size()-1)), lhs) + " " + rhs + ")";
+
+        if(isNotExpression(opstrs.get(ops.size()-1))) {
             expr += ")";
         }
+
+        return expr;
+    }
+
+    private String generateRelExpr(List<? extends ParserRuleContext> ctxs, List<Token> ops) {
+        List<String> opstrs = ops.stream().map(Token::getText).collect(Collectors.toList());
+        String expr = "";
+
+        String lhs;
+        String rhs;
+
+        int opIdx = ops.size() - 1;
+
+        if(ctxs.size() > 2) {
+            lhs = generateRelExpr(ctxs.subList(0, ctxs.size() - 1), ops.subList(0, opIdx));
+            lhs = String.format("(tobv32 %s)", lhs);
+            rhs = visitIntegerExpr(ctxs.get(ctxs.size() - 1));
+        } else {
+            lhs = visitIntegerExpr(ctxs.get(0));
+            rhs = visitIntegerExpr(ctxs.get(1));
+        }
+
+        expr += "(" + String.format(smtBinFuncs.get(opstrs.get(ops.size()-1)), lhs) + " " + rhs + ")";
+
         return expr;
     }
 
     private String generateLogicalExpr(List<? extends ParserRuleContext> ctxs, List<Token> ops) {
-
         List<String> opstrs = ops.stream().map(Token::getText).collect(Collectors.toList());
         String expr = "";
-        int numOps = ops.size();
-        int idx = 0;
 
-        for (ParserRuleContext ctx : ctxs) {
-            if (numOps > idx) {
-                String arg = visitLogicalExpr(ctx);
-                expr += "(" + String.format(smtBinFuncs.get(opstrs.get(idx)), arg) + " ";
-                ++idx;
-            } else {
-                expr += visitLogicalExpr(ctx);
-                if (isNotExpression(opstrs.get(idx - 1))) {
-                    expr += ")";
-                }
-            }
+        String lhs;
+        String rhs;
+
+        int opIdx = ops.size() - 1;
+
+        if(ctxs.size() > 2) {
+            lhs = generateLogicalExpr(ctxs.subList(0, ctxs.size()-1), ops.subList(0, opIdx));
+            rhs = visitLogicalExpr(ctxs.get(ctxs.size() - 1));
+        } else {
+            lhs = visitLogicalExpr(ctxs.get(0));
+            rhs = visitLogicalExpr(ctxs.get(1));
         }
-        for (int i = 0; i < numOps; ++i) {
+
+        expr += "(" + String.format(smtBinFuncs.get(opstrs.get(ops.size()-1)), lhs) + " " + rhs + ")";
+
+        if(isNotExpression(opstrs.get(ops.size()-1))) {
             expr += ")";
         }
         return expr;
@@ -263,7 +287,6 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         for (SimpleCParser.StmtContext stmt : ctx.stmts) {
             builder.append(visitStmt(stmt));
-            // add a new line after each statement
         }
 
         builder.append("\n");
@@ -558,7 +581,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             expr = visit(ctx.single);
         } else {
             checkLogicalReturnType();
-            expr = generateExpr(ctx.args, ctx.ops);
+            expr = generateRelExpr(ctx.args, ctx.ops);
         }
         return expr;
     }
