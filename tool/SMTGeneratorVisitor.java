@@ -189,6 +189,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         if (!asserts.isEmpty()) {
             String expr = "(assert (not \n \t";
             String assertCheckDefs = "";
+            String assertChecks = "";
             String assertCheckGets = "";
 
             int idx = 0;
@@ -205,13 +206,13 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 assertCheckDefs += String.format("(declare-fun assertCheck%s () Bool) \n", i);
                 assertCheckGets += String.format("(get-value ( assertCheck%s ))\n", i);
 
-                assertStmt = String.format("(=> assertCheck%s %s)", i, assertStmt);
+                assertChecks += String.format("(assert (= assertCheck%s %s))\n", i, assertStmt);
 
                 if (numAnds > idx) {
-                    expr += "(and " + assertStmt + " ";
+                    expr += "(and " + "assertCheck" + i + " ";
                     ++idx;
                 } else {
-                    expr += assertStmt;
+                    expr += "assertCheck" + i;
                 }
                 i++;
             }
@@ -219,7 +220,8 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 expr += ")";
             }
 
-            expr += "\n))";
+            expr += "\n))\n";
+            expr += assertChecks;
             expr += "\n(check-sat)\n";
 
             return assertCheckDefs + expr + assertCheckGets;
@@ -262,8 +264,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         for (SimpleCParser.StmtContext stmt : ctx.stmts) {
             builder.append(visitStmt(stmt));
             // add a new line after each statement
-            builder.append("\n");
         }
+
+        builder.append("\n");
 
         checkingIfLogicExpr = true;
         result = visit(ctx.returnExpr);
