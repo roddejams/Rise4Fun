@@ -3,17 +3,14 @@
 use strict;
 use warnings;
 
-use Readonly;
-
-Readonly my $TIMEOUT => 15;
-
 my ($cp, $test) = @ARGV;
+# Configurable timeout value
+my $timeout = shift @ARGV || 15;
 
-local $SIG{ALRM} = sub { die "UNKNOWN\n"; };
+local $SIG{ALRM} = sub { print "UNKNOWN\n"; exit 0; };
 
-alarm($TIMEOUT);
+alarm($timeout);
 my $res = qx/java -cp $cp:$cp\/antlr-4.5.1-complete.jar:$cp\/guava-18.0.jar tool.SRTool $test/;
 alarm(0);
 
 print $res;
-exit 0;
