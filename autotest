@@ -3,14 +3,22 @@
 use strict;
 use warnings;
 
+use threads;
 use Term::ANSIColor;
+use Readonly;
+
+# Process timeout
+Readonly my $TIMEOUT => 120;
 
 my $correct = 0;
 my $incorrect = 0;
-my $total_correct = 0;
-my $total_incorrect = 0;
 
-my @files;
+my @correct;
+my @incorrect;
+
+my @correct_names;
+my @incorrect_names;
+
 my @failed;
 
 # Build stuff
@@ -20,34 +28,48 @@ foreach my $dir (qw(./tests/correct ./tests/incorrect)) {
 opendir(DIR, $dir);
     while (my $file = readdir(DIR)) {
         next if $file =~ m/^\./;
-        push @files, "$dir/$file";
+        if($dir =~ /\/correct/) {
+            push @correct, ".\/srtool . $dir/$file $TIMEOUT 2>/dev/null";
+            push @correct_names, $file;
+        } else {
+            push @incorrect, ".\/srtool . $dir/$file $TIMEOUT 2>/dev/null";
+            push @incorrect_names, $file;
+        }
     }
 }
 
-foreach my $file (@files) {
-    my $output = qx/.\/srtool . $file 2>\/dev\/null/;
-    if ($file =~ m/tests\/correct/) {
-        $total_correct++;
-        if ($output =~ /^CORRECT/m) {
-            print color('green');
-            print "$file passed test\n";
-            $correct++;
-        } else {
-            print color('red');
-            print "$file failed test\n";
-            push @failed, $file;
-        }
+print "CORRECT TESTS\n";
+my @correct_results = run_tests(@correct);
+my $total_correct = @correct_results;
+my $i = 0;
+while ($i < @correct_results) {
+    my ($test, $result) = ($correct_names[$i], $correct_results[$i]);
+    $i++;
+    if ($result =~ /^CORRECT/m) {
+        $correct++;
+        print color('green');
+        print "$test passed test\n";
     } else {
-        $total_incorrect++;
-        if ($output =~ /^INCORRECT/m) {
-            print color('green');
-            print "$file passed test\n";
-            $incorrect++;
-        } else {
-            print color('red');
-            print "$file failed test\n";
-            push @failed, $file;
-        }
+        print color('red');
+        print "$test failed test\n";
+    }
+}
+
+print color('white');
+print "INCORRECT TESTS\n";
+my $total_incorrect = @incorrect;
+my @incorrect_results = run_tests(@incorrect);
+$i = 0;
+while ($i < @incorrect_results) {
+    my ($test, $result) = ($incorrect_names[$i], $incorrect_results[$i]);
+    $i++;
+    if ($result =~ /^INCORRECT/m) {
+        $incorrect++;
+        print color('green');
+        print "$test passed test\n";
+    } else {
+        print color('red');
+        print "$test failed test\n";
     }
 }
 
@@ -55,3 +77,10 @@ print color('white');
 print "CORRECT: $correct/$total_correct\n";
 print "INCORRECT: $incorrect/$total_incorrect\n";
 print ("FAILED TESTS:\n" . join("\n", @failed) . "\n") unless ($correct eq $total_correct and $incorrect eq $total_incorrect);
+
+sub run_tests {
+    my @tests = (@_);
+    my @threads = map { async { return `$_` } } @tests;
+    return map { $_->join } @threads;
+}
+
