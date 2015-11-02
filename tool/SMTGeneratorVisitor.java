@@ -6,6 +6,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
+import parser.SimpleCParser.CallStmtContext;
 import parser.SimpleCParser.FormalParamContext;
 import parser.SimpleCParser.LorExprContext;
 
@@ -57,9 +58,12 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     private final Set<String> asserts;
     private final Set<String> assumptions;
     private final Scopes scopes;
+    private final Map<String, ProcDetail> procDetails;
 
-    public SMTGeneratorVisitor(Set<String> globals) {
+    public SMTGeneratorVisitor(Set<String> globals, Map<String, ProcDetail> procDetails) {
         this.globals = globals;
+        this.procDetails = procDetails;
+
         this.asserts = new HashSet<>();
 
         this.assumptions = new HashSet<>();
@@ -403,6 +407,18 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         int varId = fresh(varName);
         mapping.put(varName, varId);
         return "(declare-fun " + varName + varId + " () (_ BitVec 32))";
+    }
+
+    @Override
+    public String visitCallStmt(CallStmtContext ctx) {
+        String expr = "";
+        ProcDetail details = procDetails.get(ctx.callee.getText());
+
+        visitLogicalExpr(details.getPreCond().condition);
+
+        visitLogicalExpr(details.getPostCond().condition);
+
+        return expr;
     }
 
     @Override

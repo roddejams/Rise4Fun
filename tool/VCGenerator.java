@@ -2,6 +2,7 @@ package tool;
 
 import parser.SimpleCParser.ProcedureDeclContext;
 
+import java.util.Map;
 import java.util.Set;
 
 public class VCGenerator {
@@ -9,9 +10,9 @@ public class VCGenerator {
 	private ProcedureDeclContext proc;
 	private SMTGeneratorVisitor visitor;
 
-	public VCGenerator(ProcedureDeclContext proc, Set<String> globals) {
+	public VCGenerator(ProcedureDeclContext proc, Set<String> globals, Map<String, ProcDetail> procDetails) {
 		this.proc = proc;
-		visitor = new SMTGeneratorVisitor(globals);
+		visitor = new SMTGeneratorVisitor(globals, procDetails);
 	}
 	
 	public StringBuilder generateVC() {

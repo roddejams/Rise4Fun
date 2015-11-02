@@ -1,4 +1,5 @@
 package tool;
+
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import parser.SimpleCLexer;
@@ -35,11 +36,15 @@ public class SRTool {
 			}
 			System.exit(1);
 		}
-		
-		assert ctx.procedures.size() == 1; // For Part 1 of the coursework, this can be assumed
-				
+
+        // prepare proc details
+        SummarisationVisitor summarisationVisitor = new SummarisationVisitor(tc.getGlobals());
+        for(ProcedureDeclContext proc : ctx.procedures) {
+            summarisationVisitor.visitProcedureDecl(proc);
+        }
+
 		for(ProcedureDeclContext proc : ctx.procedures) {
-			VCGenerator vcgen = new VCGenerator(proc, tc.getGlobals());
+            VCGenerator vcgen = new VCGenerator(proc, tc.getGlobals(), summarisationVisitor.getProcDetails());
 			String vc = vcgen.generateVC().toString();
 
             // prints for testing
