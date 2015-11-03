@@ -2,10 +2,7 @@ package tool;
 
 import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
-import parser.SimpleCParser.AssignStmtContext;
-import parser.SimpleCParser.EnsuresContext;
-import parser.SimpleCParser.ProcedureDeclContext;
-import parser.SimpleCParser.RequiresContext;
+import parser.SimpleCParser.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,15 +13,26 @@ public class SummarisationVisitor extends SimpleCBaseVisitor<Void>
     private final Map<String, ProcDetail> procDetails;
     private final Set<String> globals;
     private ProcDetail detail;
+    private final Scopes scopes;
 
     public SummarisationVisitor(Set<String> globals) {
         procDetails = new HashMap<>();
         this.globals = globals;
+        scopes = new Scopes();
+    }
+
+    @Override
+    public Void visitVarDecl(VarDeclContext ctx) {
+        scopes.add(ctx.ident.getText());
+        return super.visitVarDecl(ctx);
     }
 
     @Override
     public Void visitProcedureDecl(ProcedureDeclContext ctx) {
         detail = new ProcDetail();
+
+        scopes.openScope();
+
         for (SimpleCParser.PrepostContext preCond : ctx.contract) {
             if (preCond.requires() != null) {
                 detail.addPreCond(preCond.requires());
@@ -45,6 +53,8 @@ public class SummarisationVisitor extends SimpleCBaseVisitor<Void>
             visit(stmt);
         }
 
+        scopes.closeScope();
+
         procDetails.put(ctx.name.getText(), detail);
         return null;
     }
@@ -54,7 +64,7 @@ public class SummarisationVisitor extends SimpleCBaseVisitor<Void>
     public Void visitAssignStmt(AssignStmtContext ctx) {
         String varName = ctx.lhs.ident.getText();
 
-        if(globals.contains(varName)) {
+        if(scopes.getVariable(varName) == null && globals.contains(varName)) {
             detail.addToModset(varName);
         }
 
@@ -66,7 +76,7 @@ public class SummarisationVisitor extends SimpleCBaseVisitor<Void>
     public Void visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
         String varName = ctx.var.ident.getText();
 
-        if(globals.contains(varName)) {
+        if(scopes.getVariable(varName) == null && globals.contains(varName)) {
             detail.addToModset(varName);
         }
 
@@ -76,6 +86,35 @@ public class SummarisationVisitor extends SimpleCBaseVisitor<Void>
     @Override
     public Void visitCallStmt(SimpleCParser.CallStmtContext ctx) {
         detail.addCalledProc(ctx.callee.getText());
+        return null;
+    }
+
+    @Override
+    public Void visitIfStmt(IfStmtContext ctx) {
+
+        scopes.openScope();
+        visit(ctx.thenBlock);
+        scopes.closeScope();
+
+        if (ctx.elseBlock != null) {
+            scopes.openScope();
+            visit(ctx.elseBlock);
+            scopes.closeScope();
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitWhileStmt(WhileStmtContext ctx) {
+        // TODO
+        return super.visitWhileStmt(ctx);
+    }
+
+    @Override
+    public Void visitBlockStmt(BlockStmtContext ctx) {
+        scopes.openScope();
+        visit(ctx.stmt);
+        scopes.closeScope();
         return null;
     }
 

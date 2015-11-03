@@ -31,7 +31,7 @@ public class Scopes {
             }
             --scopeCount;
         }
-        return var;
+        return null;
     }
 
     public String add(String varName) {
