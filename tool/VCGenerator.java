@@ -21,7 +21,7 @@ public class VCGenerator {
 		result.append("(define-fun tobv32 ((p Bool)) (_ BitVec 32) (ite p (_ bv1 32) (_ bv0 32)))\n");
 		result.append("(define-fun tobool ((p (_ BitVec 32))) Bool (ite (= p (_ bv0 32)) false true))\n");
 
-        result.append(visitor.visitProcedureDecl(proc));
+        result.append(visitor.visit(proc));
 		
 		//result.append("\n(check-sat)\n");
 		return result;

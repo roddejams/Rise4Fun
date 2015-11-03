@@ -40,7 +40,7 @@ public class SRTool {
         // prepare proc details
         SummarisationVisitor summarisationVisitor = new SummarisationVisitor(tc.getGlobals());
         for(ProcedureDeclContext proc : ctx.procedures) {
-            summarisationVisitor.visitProcedureDecl(proc);
+            summarisationVisitor.visit(proc);
         }
 
 		for(ProcedureDeclContext proc : ctx.procedures) {
