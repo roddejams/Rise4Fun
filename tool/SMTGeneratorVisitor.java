@@ -352,7 +352,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         mapping.put(varName, newId);
 
         String varDecl = "(declare-fun " + varName + newId + " () (_ BitVec 32))\n";
-        return varDecl + "(assert (= " + varName + newId + " " + rhs + "))";
+        return varDecl + "(assert (= " + varName + newId + " " + rhs + "))\n";
     }
 
     @Override
@@ -810,13 +810,17 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         String varName;
 
         if(inCallSummarisation) {
-            varName = functionArgumentMap.get(ctx.var.ident.getText());
-            return varName;
+            if (!mapping.containsKey(ctx.var.ident.getText())) {
+                varName = functionArgumentMap.get(ctx.var.ident.getText());
+                return varName;
+            } else {
+                varName = scopes.getVariable(ctx.var.ident.getText());
+                return varName + mapping.get(varName);
+            }
         } else {
             varName = scopes.getVariable(ctx.var.ident.getText());
             return varName + mapping.get(varName);
         }
-
     }
 
     @Override
