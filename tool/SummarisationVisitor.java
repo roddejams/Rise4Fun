@@ -55,9 +55,27 @@ public class SummarisationVisitor extends SimpleCBaseVisitor<Void>
         String varName = ctx.lhs.ident.getText();
 
         if(globals.contains(varName)) {
-            detail.addToModset(ctx.lhs.ident.getText());
+            detail.addToModset(varName);
         }
 
+        return null;
+    }
+
+    //add havoc'd globals to modeset
+    @Override
+    public Void visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
+        String varName = ctx.var.ident.getText();
+
+        if(globals.contains(varName)) {
+            detail.addToModset(varName);
+        }
+
+        return null;
+    }
+
+    @Override
+    public Void visitCallStmt(SimpleCParser.CallStmtContext ctx) {
+        detail.addCalledProc(ctx.callee.getText());
         return null;
     }
 

@@ -14,11 +14,13 @@ public class ProcDetail {
     private EnsuresContext postCond;
     private final Set<String> modset;
     private final List<String> args;
+    private final Set<String> calledProcs;
 
 
     public ProcDetail() {
         modset = new HashSet<>();
         args = new ArrayList<>();
+        calledProcs = new HashSet<>();
     }
 
     public void addPreCond(RequiresContext cond) {
@@ -33,7 +35,17 @@ public class ProcDetail {
         modset.add(var);
     }
 
-    public void addArgument(String arg) { args.add(arg);}
+    public void addArgument(String arg) {
+        args.add(arg);
+    }
+
+    public void addCalledProc(String proc) {
+        calledProcs.add(proc);
+    }
+
+    public Boolean procCalled(String proc) {
+        return calledProcs.contains(proc);
+    }
 
     public RequiresContext getPreCond() {
         return preCond;
