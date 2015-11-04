@@ -52,6 +52,7 @@ while ($i < @correct_results) {
     } else {
         print color('red');
         print "$test failed test\n";
+        push @failed, $test;
     }
 }
 
@@ -70,13 +71,16 @@ while ($i < @incorrect_results) {
     } else {
         print color('red');
         print "$test failed test\n";
+        push @failed, $test;
     }
 }
 
 print color('white');
 print "CORRECT: $correct/$total_correct\n";
 print "INCORRECT: $incorrect/$total_incorrect\n";
+print color('red');
 print ("FAILED TESTS:\n" . join("\n", @failed) . "\n") unless ($correct eq $total_correct and $incorrect eq $total_incorrect);
+print color('white');
 
 sub run_tests {
     my @tests = (@_);
