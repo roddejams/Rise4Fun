@@ -558,10 +558,12 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         Map<String, Integer> ifMap = copyMap(mapping);
         mapping = ifMap;
         predicates.push(loopCond);
+
         // visit the main loop body
         String loopBody = visit(ctx.body);
 
         // generate additional assert invarient / assume false before the pop the condition pred off the stack
+        // TODO: problem is here!! inv still contains info for old values of variables, needs reapplying for newly updated vars???
         asserts.add(inv);
         //assumptions.add("false");
 
