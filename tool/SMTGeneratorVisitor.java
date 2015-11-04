@@ -550,7 +550,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         String loopCond = visitLogicalExpr(ctx.condition);
 
         // visit and build invariants
-        visit(ctx.loopInvariant);
+        ctx.invariantAnnotations.forEach(this::visit);
         String inv = buildInvariants();
 
         // build loop body and collect info for building modset
@@ -563,7 +563,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         // generate additional assert invarient / assume false before the pop the condition pred off the stack
         asserts.add(inv);
-        assumptions.add("false");
+        //assumptions.add("false");
 
         predicates.pop();
         ifMap = mapping;
@@ -575,7 +575,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         asserts.add(inv);
         // havoc the modset
         for (String var : modset) {
-            expr += havocVar(var);
+            expr += getScopeFreeVar(var);
         }
         // assuming invatiant
         assumptions.add(inv);
