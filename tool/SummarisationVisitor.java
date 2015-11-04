@@ -106,8 +106,10 @@ public class SummarisationVisitor extends SimpleCBaseVisitor<Void>
 
     @Override
     public Void visitWhileStmt(WhileStmtContext ctx) {
-        // TODO
-        return super.visitWhileStmt(ctx);
+        scopes.openScope();
+        visit(ctx.body);
+        scopes.closeScope();
+        return null;
     }
 
     @Override

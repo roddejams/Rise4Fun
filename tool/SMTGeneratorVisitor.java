@@ -6,9 +6,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
-import parser.SimpleCParser.CallStmtContext;
-import parser.SimpleCParser.FormalParamContext;
-import parser.SimpleCParser.LorExprContext;
+import parser.SimpleCParser.*;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -63,12 +61,14 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     private final Set<String> assumptions;
     private final Scopes scopes;
     private final Map<String, ProcDetail> procDetails;
+    private final Set<String> invariants;
 
     public SMTGeneratorVisitor(Set<String> globals, Map<String, ProcDetail> procDetails) {
         this.globals = globals;
         this.procDetails = procDetails;
 
         this.asserts = new HashSet<>();
+        invariants = new HashSet<>();
 
         this.assumptions = new HashSet<>();
         assumptions.add("true");
@@ -373,6 +373,27 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         return "";
     }
 
+    private String buildInvariants() {
+        String invariantStr = "";
+
+        int idx = 0;
+        int numInvariants = invariants.size() - 1;
+
+        for (String inv : invariants) {
+            if (numInvariants > idx) {
+                invariantStr += "(and " + inv + " ";
+                ++idx;
+            } else {
+                invariantStr += inv;
+            }
+        }
+        for (int i = 0; i < numInvariants; i++) {
+            invariantStr += ")";
+        }
+
+        return invariantStr;
+    }
+
     private String buildAssumptions() {
         String assumptionStr = "";
 
@@ -417,7 +438,11 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
-        String varName = scopes.getVariable(ctx.var.ident.getText());
+        return havocVar(ctx.var.ident.getText());
+    }
+
+    private String havocVar(String var) {
+        String varName = scopes.getVariable(var);
         int varId = fresh(varName);
         mapping.put(varName, varId);
         return "(declare-fun " + varName + varId + " () (_ BitVec 32))\n";
@@ -518,6 +543,68 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     }
 
     @Override
+    public String visitWhileStmt(WhileStmtContext ctx) {
+        String expr = "";
+
+        // visit and generate loop condition
+        String loopCond = visitLogicalExpr(ctx.condition);
+
+        // visit and build invariants
+        visit(ctx.loopInvariant);
+        String inv = buildInvariants();
+
+        // build loop body and collect info for building modset
+        Map<String, Integer> originalMap = copyMap(mapping);
+        Map<String, Integer> ifMap = copyMap(mapping);
+        mapping = ifMap;
+        predicates.push(loopCond);
+        // visit the main loop body
+        String loopBody = visit(ctx.body);
+
+        // generate additional assert invarient / assume false before the pop the condition pred off the stack
+        asserts.add(inv);
+        assumptions.add("false");
+
+        predicates.pop();
+        ifMap = mapping;
+        mapping = originalMap;
+        Set<String> modset = calculateLoopModset(originalMap, ifMap);
+
+        // pretend we visit arbitrary loop iteration
+        // assert the invariant
+        asserts.add(inv);
+        // havoc the modset
+        for (String var : modset) {
+            expr += havocVar(var);
+        }
+        // assuming invatiant
+        assumptions.add(inv);
+
+        // add loop body
+        expr += loopBody;
+        for (String var : modset) {
+            expr += getScopeFreeVar(var);
+            expr += "\n";
+            String ifVar = ifMap.get(var) != null ? var + ifMap.get(var) : "(_ bv0 32)";
+            String elseVar = originalMap.get(var) != null ? var + originalMap.get(var) : "(_ bv0 32)";
+            expr += String.format("(assert (= %s (ite %s %s %s)))\n", var + mapping.get(var), loopCond,
+                    ifVar, elseVar);
+        }
+
+        return expr;
+    }
+
+    private Set<String> calculateLoopModset(Map<String, Integer> originalMap, Map<String, Integer> ifMap) {
+        Set<String> modset = new HashSet<>();
+
+        MapDifference<String, Integer> ifMapDiff = Maps.difference(originalMap, ifMap);
+
+        modset.addAll(ifMapDiff.entriesDiffering().keySet());
+
+        return modset;
+    }
+
+    @Override
     public String visitBlockStmt(SimpleCParser.BlockStmtContext ctx) {
         scopes.openScope();
         StringBuilder builder = new StringBuilder();
@@ -527,6 +614,13 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         });
         scopes.closeScope();
         return builder.toString();
+    }
+
+    @Override
+    public String visitInvariant(InvariantContext ctx) {
+        String inv = visitLogicalExpr(ctx.condition);
+        invariants.add(inv);
+        return "";
     }
 
     private Map<String, Integer> copyMap(Map<String, Integer> map) {
