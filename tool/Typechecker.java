@@ -1,8 +1,24 @@
 package tool;
-import parser.SimpleCBaseVisitor;
-import parser.SimpleCParser.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import java.util.*;
+import parser.SimpleCBaseVisitor;
+import parser.SimpleCParser.AssignStmtContext;
+import parser.SimpleCParser.BlockStmtContext;
+import parser.SimpleCParser.CallStmtContext;
+import parser.SimpleCParser.CandidateEnsuresContext;
+import parser.SimpleCParser.EnsuresContext;
+import parser.SimpleCParser.FormalParamContext;
+import parser.SimpleCParser.HavocStmtContext;
+import parser.SimpleCParser.ProcedureDeclContext;
+import parser.SimpleCParser.ProgramContext;
+import parser.SimpleCParser.ResultExprContext;
+import parser.SimpleCParser.VarDeclContext;
+import parser.SimpleCParser.VarrefContext;
 
 public class Typechecker extends SimpleCBaseVisitor<Void> {
 
@@ -10,7 +26,7 @@ public class Typechecker extends SimpleCBaseVisitor<Void> {
 
 	private Map<String, Integer> actualProcedures = new HashMap<>();
 
-    private Set<String> globals = new HashSet<>();
+	private Set<String> globals = new HashSet<>();
 
 	private HashSet<String> parameters = null;
 	
@@ -83,6 +99,14 @@ public class Typechecker extends SimpleCBaseVisitor<Void> {
 		inEnsures = false;
 		return result;
 	}
+
+	@Override
+	public Void visitCandidateEnsures(CandidateEnsuresContext ctx) {
+		inEnsures = true;
+		Void result = super.visitCandidateEnsures(ctx);
+		inEnsures = false;
+		return result;
+	}
 	
 	@Override
 	public Void visitResultExpr(ResultExprContext ctx) {
@@ -94,7 +118,7 @@ public class Typechecker extends SimpleCBaseVisitor<Void> {
 
 	@Override
 	public Void visitOldExpr(parser.SimpleCParser.OldExprContext ctx) {
-		if(!globals.contains(ctx.arg.ident.name.getText())) {
+		if(!globals.contains(ctx.arg.ident.name.getText()) || parameters.contains(ctx.arg.ident.getText())) {
 			error("'\\old' applied to non-global variable at line " + ctx.oldTok.getLine());
 		}
 		return super.visitOldExpr(ctx);
@@ -190,10 +214,6 @@ public class Typechecker extends SimpleCBaseVisitor<Void> {
 	public Iterable<String> getErrors() {
 		return errors;
 	}
-
-    public Set<String> getGlobals() {
-        return globals;
-    }
 	
 }
 
