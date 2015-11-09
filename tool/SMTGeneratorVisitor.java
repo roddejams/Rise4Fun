@@ -465,9 +465,8 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         inCallSummarisation = true;
         //visit precondition with arguments replaced with actuals
-        if(details.getPreCond() != null) {
-            visit(details.getPreCond());
-        }
+        details.getPreConds().forEach(this::visit);
+
 
         //havoc the modset
         for(String varName : details.getModset()) {
@@ -483,9 +482,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         expr += "(declare-fun " + functionReturnTemp + ret_id + " () (_ BitVec 32))\n";
 
         //visit the postcondition with \result replaced with bar_ret
-        if(details.getPostCond() != null) {
-            visit(details.getPostCond());
-        }
+        details.getPostConds().forEach(this::visit);
 
         // Assign the lhs to the temporary return variable
         String varName = scopes.getVariable(ctx.lhs.ident.getText());
@@ -531,7 +528,10 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         //calculate modsets
         ModsetCalculatorVisitor modsetCalculator = new ModsetCalculatorVisitor(scopes, procDetails);
-        modsetCalculator.visit(ctx);
+        modsetCalculator.visit(ctx.thenBlock);
+        if(ctx.elseBlock != null) {
+            modsetCalculator.visit(ctx.elseBlock);
+        }
         Set<String> modset = modsetCalculator.getModset();
 
         // apply the modset difference
@@ -610,16 +610,6 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                     ifVar, elseVar);
         }
         return expr;
-    }
-
-    private Set<String> calculateLoopModset(Map<String, Integer> originalMap, Map<String, Integer> ifMap) {
-        Set<String> modset = new HashSet<>();
-
-        MapDifference<String, Integer> ifMapDiff = Maps.difference(originalMap, ifMap);
-
-        modset.addAll(ifMapDiff.entriesDiffering().keySet());
-
-        return modset;
     }
 
     @Override

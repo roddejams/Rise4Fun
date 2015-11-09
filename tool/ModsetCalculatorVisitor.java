@@ -43,7 +43,7 @@ public class ModsetCalculatorVisitor extends SimpleCBaseVisitor<Void> {
         String varName = ctx.lhs.ident.getText();
 
         if(initialScope.getVariable(varName) != null && internalScopes.getVariable(varName) == null) {
-            modset.add(varName);
+            modset.add(initialScope.getVariable(varName));
         }
 
         return null;
@@ -55,7 +55,7 @@ public class ModsetCalculatorVisitor extends SimpleCBaseVisitor<Void> {
         String varName = ctx.var.ident.getText();
 
         if(initialScope.getVariable(varName) != null && internalScopes.getVariable(varName) == null) {
-            modset.add(varName);
+            modset.add(initialScope.getVariable(varName));
         }
 
         return null;
@@ -92,7 +92,7 @@ public class ModsetCalculatorVisitor extends SimpleCBaseVisitor<Void> {
     @Override
     public Void visitBlockStmt(BlockStmtContext ctx) {
         internalScopes.openScope();
-        visit(ctx.stmt);
+        ctx.stmts.forEach(this::visit);
         internalScopes.closeScope();
         return null;
     }
