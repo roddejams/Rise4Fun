@@ -6,7 +6,6 @@ int foo()
     int x;
     assume i > 0;
     x = succ(i);
-    i = i + 1;
     return x;
 }
 
