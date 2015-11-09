@@ -551,49 +551,56 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     public String visitWhileStmt(WhileStmtContext ctx) {
         String expr = "";
 
-        // visit and generate loop condition
+        //Assert invariant
+        ctx.invariantAnnotations.forEach(this::visit);
+        String invariantWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), buildInvariants());
+        asserts.add(invariantWithPred);
+
+        //calculate modset
+        ModsetCalculatorVisitor modsetCalculator = new ModsetCalculatorVisitor(scopes, procDetails);
+        modsetCalculator.visit(ctx);
+        Set<String> modset = modsetCalculator.getModset();
+
+        //havoc the modset
+        for (String var : modset) {
+            expr += havocVar(var);
+        }
+
+        //Assume Invariant
+        invariants.clear();
+        ctx.invariantAnnotations.forEach(this::visit);
+        String assumeInvariant = String.format("(=> %s %s)", buildPredicate(), buildInvariants());
+        assumptions.add(assumeInvariant);
+
+        //Approximate the while loop with an if stmt
         String loopCond = visitLogicalExpr(ctx.condition);
 
-        // visit and build invariants
-        ctx.invariantAnnotations.forEach(this::visit);
-        String invBefore = buildInvariants();
-
-        // build loop body and collect info for building modset
         Map<String, Integer> originalMap = copyMap(mapping);
         Map<String, Integer> ifMap = copyMap(mapping);
+
         mapping = ifMap;
+
         predicates.push(loopCond);
 
-        // visit the main loop body
-        String loopBody = visit(ctx.body);
+        //visit loop body
+        expr += visit(ctx.body);
+
+        //Assert Invariant
+        invariants.clear();
+        ctx.invariantAnnotations.forEach(this::visit);
+        invariantWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), buildInvariants());
+        asserts.add(invariantWithPred);
+
+        //Assume false
+        String assumeFalse = String.format("(=> %s %s)", buildPredicate(), "false");
+        assumptions.add(assumeFalse);
+
+        predicates.pop();
 
         ifMap = mapping;
         mapping = originalMap;
 
-        // generate additional assert invarient / assume false before the pop the condition pred off the stack
-        // TODO: problem is here!! inv still contains info for old values of variables, needs reapplying for newly updated vars???
-        invariants.clear();
-        ctx.invariantAnnotations.forEach(this::visit);
-        String invAfter = buildInvariants();
-        asserts.add(invAfter);
-        String assumeWithPred = String.format("(=> %s %s)", buildPredicate(), "false");
-        assumptions.add(assumeWithPred);
-
-        predicates.pop();
-        Set<String> modset = calculateLoopModset(originalMap, ifMap);
-
-        // pretend we visit arbitrary loop iteration
-        // assert the invariant
-        asserts.add(invBefore);
-        // havoc the modset
-        for (String var : modset) {
-            expr += getScopeFreeVar(var);
-        }
-        // assuming invatiant
-        assumptions.add(invBefore);
-
-        // add loop body
-        expr += loopBody;
+        //Apply the modset difference
         for (String var : modset) {
             expr += getScopeFreeVar(var);
             expr += "\n";
@@ -602,7 +609,6 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             expr += String.format("(assert (= %s (ite %s %s %s)))\n", var + mapping.get(var), loopCond,
                     ifVar, elseVar);
         }
-
         return expr;
     }
 
