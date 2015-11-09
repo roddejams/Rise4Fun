@@ -467,7 +467,6 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         //visit precondition with arguments replaced with actuals
         details.getPreConds().forEach(this::visit);
 
-
         //havoc the modset
         for(String varName : details.getModset()) {
             int varId = fresh(varName);
@@ -563,7 +562,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         //havoc the modset
         for (String var : modset) {
-            expr += havocVar(var);
+            expr += getScopeFreeVar(var);
         }
 
         //Assume Invariant
