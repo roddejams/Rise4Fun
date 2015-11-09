@@ -10,8 +10,8 @@ import java.util.Set;
 
 public class ProcDetail {
 
-    private RequiresContext preCond;
-    private EnsuresContext postCond;
+    private List<RequiresContext> preConds;
+    private List<EnsuresContext> postConds;
     private final Set<String> modset;
     private final List<String> args;
     private final Set<String> calledProcs;
@@ -21,14 +21,16 @@ public class ProcDetail {
         modset = new HashSet<>();
         args = new ArrayList<>();
         calledProcs = new HashSet<>();
+        preConds = new ArrayList<>();
+        postConds = new ArrayList<>();
     }
 
     public void addPreCond(RequiresContext cond) {
-        preCond = cond;
+        preConds.add(cond);
     }
 
     public void addPostCond(EnsuresContext cond) {
-        postCond = cond;
+        postConds.add(cond);
     }
 
     public void addToModset(String var) {
@@ -47,12 +49,12 @@ public class ProcDetail {
         return calledProcs.contains(proc);
     }
 
-    public RequiresContext getPreCond() {
-        return preCond;
+    public List<RequiresContext> getPreConds() {
+        return preConds;
     }
 
-    public EnsuresContext getPostCond() {
-        return postCond;
+    public List<EnsuresContext> getPostConds() {
+        return postConds;
     }
 
     public Set<String> getModset() {

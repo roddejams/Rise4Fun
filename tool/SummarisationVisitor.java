@@ -33,6 +33,13 @@ public class SummarisationVisitor extends ModsetCalculatorVisitor {
             }
         }
 
+        //TODO: Deal with candidate pre / post
+        /*for (SimpleCParser.PrepostContext postCond : ctx.contract) {
+            if (postCond.candidateRequires() != null) {
+                detail.addPostCond(postCond.ensures());
+            }
+        }*/
+
         for(SimpleCParser.FormalParamContext param : ctx.formals) {
             detail.addArgument(param.ident.getText());
         }
