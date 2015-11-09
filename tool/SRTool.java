@@ -36,7 +36,11 @@ public class SRTool {
 		}
 
         // prepare proc details
-        SummarisationVisitor summarisationVisitor = new SummarisationVisitor(tc.getGlobals());
+        Scopes globalScope = new Scopes();
+        globalScope.openScope();
+        tc.getGlobals().forEach(globalScope::add);
+        SummarisationVisitor summarisationVisitor = new SummarisationVisitor(globalScope);
+
         for(ProcedureDeclContext proc : ctx.procedures) {
             summarisationVisitor.visit(proc);
         }
