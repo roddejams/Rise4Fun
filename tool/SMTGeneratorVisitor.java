@@ -531,7 +531,10 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         //calculate modsets
         ModsetCalculatorVisitor modsetCalculator = new ModsetCalculatorVisitor(scopes, procDetails);
-        modsetCalculator.visit(ctx);
+        modsetCalculator.visit(ctx.thenBlock);
+        if(ctx.elseBlock != null) {
+            modsetCalculator.visit(ctx.elseBlock);
+        }
         Set<String> modset = modsetCalculator.getModset();
 
         // apply the modset difference
@@ -610,16 +613,6 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                     ifVar, elseVar);
         }
         return expr;
-    }
-
-    private Set<String> calculateLoopModset(Map<String, Integer> originalMap, Map<String, Integer> ifMap) {
-        Set<String> modset = new HashSet<>();
-
-        MapDifference<String, Integer> ifMapDiff = Maps.difference(originalMap, ifMap);
-
-        modset.addAll(ifMapDiff.entriesDiffering().keySet());
-
-        return modset;
     }
 
     @Override
