@@ -10,7 +10,7 @@ import java.util.Set;
 
 public class ModsetCalculatorVisitor extends SimpleCBaseVisitor<Void> {
 
-    private final Set<String> modset;
+    protected final Set<String> modset;
 
     private final Scopes initialScope;
     protected final Scopes internalScopes;

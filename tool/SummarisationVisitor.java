@@ -41,6 +41,7 @@ public class SummarisationVisitor extends ModsetCalculatorVisitor {
 
         internalScopes.closeScope();
 
+        modset.forEach(detail::addToModset);
         procDetails.put(ctx.name.getText(), detail);
         return null;
     }
