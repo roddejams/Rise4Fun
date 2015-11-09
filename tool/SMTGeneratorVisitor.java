@@ -640,11 +640,11 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         String iteCond = visitLogicalExpr(args.get(0));
 
-        expr += "(ite " + iteCond + " " + visit(args.get(1)) + " ";
+        expr += "(ite " + iteCond + " " + visitIntegerExpr(args.get(1)) + " ";
         if (args.size() > 3) {
             expr += generateIte(args.subList(2, args.size()));
         } else {
-            expr += visit(args.get(2));
+            expr += visitIntegerExpr(args.get(2));
         }
         expr += ")";
         return expr;
