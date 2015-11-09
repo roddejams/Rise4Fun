@@ -1,8 +1,10 @@
 package tool;
 
 import parser.SimpleCParser;
+import parser.SimpleCParser.CandidateInvariantContext;
 import parser.SimpleCParser.EnsuresContext;
 import parser.SimpleCParser.RequiresContext;
+import tool.candidate.CandidateInvariant;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -18,6 +20,7 @@ public class ProcDetail {
     private final Set<String> modset;
     private final List<String> args;
     private final Set<String> calledProcs;
+    private final List<CandidateInvariant> candidateInvariants;
 
 
     public ProcDetail(SimpleCParser.ProcedureDeclContext ctx) {
@@ -28,6 +31,7 @@ public class ProcDetail {
         calledProcs = new HashSet<>();
         preConds = new ArrayList<>();
         postConds = new ArrayList<>();
+        candidateInvariants = new ArrayList<>();
     }
 
     public void addPreCond(RequiresContext cond) {
@@ -84,5 +88,9 @@ public class ProcDetail {
 
     public void setVerified() {
         verified = true;
+    }
+
+    public void addCandidateInvariant(CandidateInvariantContext ctx) {
+        candidateInvariants.add(new CandidateInvariant(ctx));
     }
 }

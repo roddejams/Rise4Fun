@@ -21,24 +21,7 @@ public class SummarisationVisitor extends ModsetCalculatorVisitor {
 
         internalScopes.openScope();
 
-        for (SimpleCParser.PrepostContext preCond : ctx.contract) {
-            if (preCond.requires() != null) {
-                detail.addPreCond(preCond.requires());
-            }
-        }
-
-        for (SimpleCParser.PrepostContext postCond : ctx.contract) {
-            if (postCond.ensures() != null) {
-                detail.addPostCond(postCond.ensures());
-            }
-        }
-
-        //TODO: Deal with candidate pre / post
-        /*for (SimpleCParser.PrepostContext postCond : ctx.contract) {
-            if (postCond.candidateRequires() != null) {
-                detail.addPostCond(postCond.ensures());
-            }
-        }*/
+        ctx.contract.forEach(this::visit);
 
         for(SimpleCParser.FormalParamContext param : ctx.formals) {
             detail.addArgument(param.ident.getText());
@@ -54,8 +37,38 @@ public class SummarisationVisitor extends ModsetCalculatorVisitor {
     }
 
     @Override
+    public Void visitRequires(SimpleCParser.RequiresContext ctx) {
+        detail.addPreCond(ctx);
+        return null;
+    }
+
+    @Override
+    public Void visitEnsures(SimpleCParser.EnsuresContext ctx) {
+        detail.addPostCond(ctx);
+        return null;
+    }
+
+    @Override
+    public Void visitCandidateRequires(SimpleCParser.CandidateRequiresContext ctx) {
+        //TODO: Deal with candidates
+        return null;
+    }
+
+    @Override
+    public Void visitCandidateEnsures(SimpleCParser.CandidateEnsuresContext ctx) {
+        //TODO: Deal with candidates
+        return null;
+    }
+
+    @Override
     public Void visitCallStmt(SimpleCParser.CallStmtContext ctx) {
         detail.addCalledProc(ctx.callee.getText());
+        return null;
+    }
+
+    @Override
+    public Void visitCandidateInvariant(SimpleCParser.CandidateInvariantContext ctx) {
+        detail.addCandidateInvariant(ctx);
         return null;
     }
 
