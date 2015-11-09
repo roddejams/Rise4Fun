@@ -29,7 +29,7 @@ public class SummarisationVisitor extends SimpleCBaseVisitor<Void>
 
     @Override
     public Void visitProcedureDecl(ProcedureDeclContext ctx) {
-        detail = new ProcDetail();
+        detail = new ProcDetail(ctx);
 
         scopes.openScope();
 

@@ -6,15 +6,13 @@ import parser.SimpleCLexer;
 import parser.SimpleCParser;
 import parser.SimpleCParser.ProcedureDeclContext;
 import parser.SimpleCParser.ProgramContext;
-import util.ProcessExec;
-import util.ProcessTimeoutException;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 
 public class SRTool {
 
-    private static final int TIMEOUT = 30;
+    private static final int POOL_SIZE = 2;
 
 	public static void main(String[] args) throws IOException, InterruptedException {
         String filename = args[0];
@@ -43,37 +41,11 @@ public class SRTool {
             summarisationVisitor.visit(proc);
         }
 
-		for(ProcedureDeclContext proc : ctx.procedures) {
-            VCGenerator vcgen = new VCGenerator(proc, tc.getGlobals(), summarisationVisitor.getProcDetails());
-			String vc = vcgen.generateVC().toString();
+        // Verify
+        HoudiniVerifier verifier = new HoudiniVerifier(POOL_SIZE, tc.getGlobals(),
+                summarisationVisitor.getProcDetails());
 
-            // prints for testing
-            System.err.println(vc);
-
-			ProcessExec process = new ProcessExec("z3", "-smt2", "-in");
-			String queryResult = "";
-			try {
-				queryResult = process.execute(vc, TIMEOUT);
-                System.err.println(queryResult);
-			} catch (ProcessTimeoutException e) {
-				System.out.println("UNKNOWN");
-				System.exit(1);
-			}
-			
-			if (queryResult.startsWith("sat")) {
-				System.out.println("INCORRECT");
-				System.exit(0);
-			}
-			
-			if (!queryResult.startsWith("unsat")) {
-				System.out.println("UNKNOWN");
-				System.out.println(queryResult);
-				System.exit(1);
-			}
-		}
-		
-		System.out.println("CORRECT");
-		System.exit(0);
-		
+        System.out.println(verifier.verify());
+        System.exit(0);
     }
 }

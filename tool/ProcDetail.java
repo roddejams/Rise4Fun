@@ -1,5 +1,6 @@
 package tool;
 
+import parser.SimpleCParser;
 import parser.SimpleCParser.EnsuresContext;
 import parser.SimpleCParser.RequiresContext;
 
@@ -10,6 +11,8 @@ import java.util.Set;
 
 public class ProcDetail {
 
+    private SimpleCParser.ProcedureDeclContext ctx;
+    private Boolean verified;
     private RequiresContext preCond;
     private EnsuresContext postCond;
     private final Set<String> modset;
@@ -17,7 +20,9 @@ public class ProcDetail {
     private final Set<String> calledProcs;
 
 
-    public ProcDetail() {
+    public ProcDetail(SimpleCParser.ProcedureDeclContext ctx) {
+        this.ctx = ctx;
+        verified = false;
         modset = new HashSet<>();
         args = new ArrayList<>();
         calledProcs = new HashSet<>();
@@ -61,5 +66,21 @@ public class ProcDetail {
 
     public List<String> getArgs() {
         return args;
+    }
+
+    public SimpleCParser.ProcedureDeclContext getCtx() {
+        return ctx;
+    }
+
+    public Boolean getVerified() {
+        return verified;
+    }
+
+    public void setUnverified() {
+        verified = false;
+    }
+
+    public void setVerified() {
+        verified = true;
     }
 }
