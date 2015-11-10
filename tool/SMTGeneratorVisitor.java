@@ -1,7 +1,5 @@
 package tool;
 
-import com.google.common.collect.MapDifference;
-import com.google.common.collect.Maps;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import parser.SimpleCBaseVisitor;
@@ -274,7 +272,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         // register global variables and proc args
         for (String var : globals) {
             builder.append(declareVar(var));
-            builder.append("\n");
+            //builder.append("\n");
         }
 
         // proc scope
@@ -574,7 +572,10 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         //Approximate the while loop with an if stmt
         String loopCond = visitLogicalExpr(ctx.condition);
 
+        // originalMap used to restore global mapping
         Map<String, Integer> originalMap = copyMap(mapping);
+        // initialMap used to pull off values for varIds before havocing the modset
+        Map<String, Integer> initialMap = copyMap(mapping);
         Map<String, Integer> ifMap = copyMap(mapping);
 
         mapping = ifMap;
@@ -604,7 +605,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             expr += getScopeFreeVar(var);
             expr += "\n";
             String ifVar = ifMap.get(var) != null ? var + ifMap.get(var) : "(_ bv0 32)";
-            String elseVar = originalMap.get(var) != null ? var + originalMap.get(var) : "(_ bv0 32)";
+            String elseVar = initialMap.get(var) != null ? var + initialMap.get(var) : var + originalMap.get(var);
             expr += String.format("(assert (= %s (ite %s %s %s)))\n", var + mapping.get(var), loopCond,
                     ifVar, elseVar);
         }
