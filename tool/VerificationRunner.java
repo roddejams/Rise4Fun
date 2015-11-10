@@ -1,9 +1,6 @@
 package tool;
 
-import util.ProcessExec;
-
 import java.util.Queue;
-import java.util.concurrent.Callable;
 
 public class VerificationRunner implements Runnable {
 
@@ -25,10 +22,11 @@ public class VerificationRunner implements Runnable {
         // prints for testing
         System.err.println(smtCode);
 
-        ProcessExec process = new ProcessExec("z3", "-smt2", "-in");
         String queryResult = "";
         try {
-            queryResult = process.execute(smtCode, TIMEOUT);
+            Z3Result z3Runner = new Z3Result();
+            z3Runner.process(smtCode);
+            queryResult = z3Runner.getResult();
             System.err.println(queryResult);
         } catch (Exception e) {
             e.printStackTrace();
