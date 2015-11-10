@@ -237,7 +237,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 assertCheckDefs += String.format("(declare-fun %s%s () Bool) \n", assertName, assertionIndex);
                 assertCheckGets += String.format("(get-value ( %s%s ))\n", assertName, assertionIndex);
 
-                assertChecks += String.format("(assert (= %s%s %s))\n", assertName, assertionIndex, assertStmt);
+                assertChecks += String.format("(assert (= %s%s %s))\n", assertName, assertionIndex, assertStmt.getAssertion());
 
                 if (numAnds > idx) {
                     expr += "(and " + assertName + assertionIndex + " ";
