@@ -1,4 +1,4 @@
-package tool.candidate;
+package candidate;
 
 import parser.SimpleCParser.CandidateInvariantContext;
 

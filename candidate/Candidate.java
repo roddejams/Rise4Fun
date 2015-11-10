@@ -1,4 +1,4 @@
-package tool.candidate;
+package candidate;
 
 import java.util.ArrayList;
 import java.util.List;
