@@ -136,7 +136,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         int opIdx = ops.size() - 1;
 
         if(ctxs.size() > 2) {
-            lhs = generateExpr(ctxs.subList(0, ctxs.size()-1), ops.subList(0, opIdx));
+            lhs = generateExpr(ctxs.subList(0, ctxs.size() - 1), ops.subList(0, opIdx));
             rhs = visitIntegerExpr(ctxs.get(ctxs.size() - 1));
         } else {
             lhs = visitIntegerExpr(ctxs.get(0));
@@ -233,6 +233,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             if(mapping.containsKey("assertCheck")) {
                 i = mapping.get("assertCheck") + 1;
             }
+
 
             for (String assertStmt : asserts) {
                 assertCheckDefs += String.format("(declare-fun assertCheck%s () Bool) \n", i);
@@ -565,6 +566,10 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         for (String var : modset) {
             expr += havocVar(var);
         }
+
+
+        IfStmtContext ifctx = new SimpleCParser.IfStmtContext(ctx.getParent(), 0);
+
 
         //Assume Invariant
         invariants.clear();

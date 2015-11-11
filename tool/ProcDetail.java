@@ -4,7 +4,7 @@ import parser.SimpleCParser;
 import parser.SimpleCParser.CandidateInvariantContext;
 import parser.SimpleCParser.EnsuresContext;
 import parser.SimpleCParser.RequiresContext;
-import tool.candidate.CandidateInvariant;
+import candidate.CandidateInvariant;
 
 import java.util.ArrayList;
 import java.util.HashSet;
