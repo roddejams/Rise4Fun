@@ -1,7 +1,5 @@
 package tool;
 
-import com.google.common.collect.MapDifference;
-import com.google.common.collect.Maps;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import parser.SimpleCBaseVisitor;
@@ -57,7 +55,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     private final Map<String, Integer> fresh = new HashMap<>();
     private Map<String, Integer> oldGlobals = new HashMap<>();
     private final Set<String> globals;
-    private final Set<String> asserts;
+    private final Set<Assertion> asserts;
     private final Set<String> assumptions;
     private final Scopes scopes;
     private final Map<String, ProcDetail> procDetails;
@@ -226,28 +224,27 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
             int idx = 0;
             int numAnds = asserts.size() - 1;
+            int assertionIndex = 0;
 
-            int i = 0;
+            for (Assertion assertStmt : asserts) {
+                String assertName;
+                if (assertStmt.getName() != null) {
+                    assertName = assertStmt.getName();
+                } else {
+                    assertName = "assertCheck";
+                }
+                assertCheckDefs += String.format("(declare-fun %s%s () Bool) \n", assertName, assertionIndex);
+                assertCheckGets += String.format("(get-value ( %s%s ))\n", assertName, assertionIndex);
 
-            //Check for global variables named assertCheck to avoid clash
-            if(mapping.containsKey("assertCheck")) {
-                i = mapping.get("assertCheck") + 1;
-            }
-
-
-            for (String assertStmt : asserts) {
-                assertCheckDefs += String.format("(declare-fun assertCheck%s () Bool) \n", i);
-                assertCheckGets += String.format("(get-value ( assertCheck%s ))\n", i);
-
-                assertChecks += String.format("(assert (= assertCheck%s %s))\n", i, assertStmt);
+                assertChecks += String.format("(assert (= %s%s %s))\n", assertName, assertionIndex, assertStmt.getAssertion());
 
                 if (numAnds > idx) {
-                    expr += "(and " + "assertCheck" + i + " ";
+                    expr += "(and " + assertName + assertionIndex + " ";
                     ++idx;
                 } else {
-                    expr += "assertCheck" + i;
+                    expr += assertName + assertionIndex;
                 }
-                i++;
+                assertionIndex++;
             }
             for (int j = 0; j < numAnds; ++j) {
                 expr += ")";
@@ -275,7 +272,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         // register global variables and proc args
         for (String var : globals) {
             builder.append(declareVar(var));
-            builder.append("\n");
+            //builder.append("\n");
         }
 
         // proc scope
@@ -322,8 +319,8 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         String requiredCondition = visitLogicalExpr(ctx.condition);
 
         if(inCallSummarisation) {
-            String assumeWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), requiredCondition);
-            asserts.add(assumeWithPred);
+            String assertWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), requiredCondition);
+            asserts.add(new Assertion(assertWithPred));
         } else {
             assumptions.add(requiredCondition);
         }
@@ -337,8 +334,8 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         if(inCallSummarisation) {
             assumptions.add(ensuredCondition);
         } else {
-            String assumeWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), ensuredCondition);
-            asserts.add(assumeWithPred);
+            String assertWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), ensuredCondition);
+            asserts.add(new Assertion(assertWithPred));
         }
         return "";
     }
@@ -361,7 +358,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         String assertCondition = visitLogicalExpr(ctx.condition);
 
         String assertWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), assertCondition);
-        asserts.add(assertWithPred);
+        asserts.add(new Assertion(assertWithPred));
         return "";
     }
 
@@ -468,7 +465,6 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         //visit precondition with arguments replaced with actuals
         details.getPreConds().forEach(this::visit);
 
-
         //havoc the modset
         for(String varName : details.getModset()) {
             int varId = fresh(varName);
@@ -555,7 +551,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         //Assert invariant
         ctx.invariantAnnotations.forEach(this::visit);
         String invariantWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), buildInvariants());
-        asserts.add(invariantWithPred);
+        asserts.add(new Assertion(invariantWithPred));
 
         //calculate modset
         ModsetCalculatorVisitor modsetCalculator = new ModsetCalculatorVisitor(scopes, procDetails);
@@ -564,7 +560,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         //havoc the modset
         for (String var : modset) {
-            expr += havocVar(var);
+            expr += getScopeFreeVar(var);
         }
 
 
@@ -580,7 +576,10 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         //Approximate the while loop with an if stmt
         String loopCond = visitLogicalExpr(ctx.condition);
 
+        // originalMap used to restore global mapping
         Map<String, Integer> originalMap = copyMap(mapping);
+        // initialMap used to pull off values for varIds before havocing the modset
+        Map<String, Integer> initialMap = copyMap(mapping);
         Map<String, Integer> ifMap = copyMap(mapping);
 
         mapping = ifMap;
@@ -594,7 +593,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         invariants.clear();
         ctx.invariantAnnotations.forEach(this::visit);
         invariantWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), buildInvariants());
-        asserts.add(invariantWithPred);
+        asserts.add(new Assertion(invariantWithPred));
 
         //Assume false
         String assumeFalse = String.format("(=> %s %s)", buildPredicate(), "false");
@@ -610,7 +609,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             expr += getScopeFreeVar(var);
             expr += "\n";
             String ifVar = ifMap.get(var) != null ? var + ifMap.get(var) : "(_ bv0 32)";
-            String elseVar = originalMap.get(var) != null ? var + originalMap.get(var) : "(_ bv0 32)";
+            String elseVar = initialMap.get(var) != null ? var + initialMap.get(var) : var + originalMap.get(var);
             expr += String.format("(assert (= %s (ite %s %s %s)))\n", var + mapping.get(var), loopCond,
                     ifVar, elseVar);
         }
@@ -646,11 +645,11 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         String iteCond = visitLogicalExpr(args.get(0));
 
-        expr += "(ite " + iteCond + " " + visit(args.get(1)) + " ";
+        expr += "(ite " + iteCond + " " + visitIntegerExpr(args.get(1)) + " ";
         if (args.size() > 3) {
             expr += generateIte(args.subList(2, args.size()));
         } else {
-            expr += visit(args.get(2));
+            expr += visitIntegerExpr(args.get(2));
         }
         expr += ")";
         return expr;
