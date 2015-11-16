@@ -38,8 +38,6 @@ opendir(DIR, $dir);
     }
 }
 
-use Data::Dumper; print Dumper @correct;
-
 my $result;
 
 print "CORRECT TESTS\n";
