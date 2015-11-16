@@ -8,7 +8,7 @@ use Term::ANSIColor;
 use Readonly;
 
 # Process timeout
-Readonly my $TIMEOUT => 120;
+Readonly my $TIMEOUT => 10;
 
 my $correct = 0;
 my $incorrect = 0;
@@ -38,12 +38,16 @@ opendir(DIR, $dir);
     }
 }
 
+use Data::Dumper; print Dumper @correct;
+
+my $result;
+
 print "CORRECT TESTS\n";
-my @correct_results = run_tests(@correct);
-my $total_correct = @correct_results;
+my $total_correct = @correct;
 my $i = 0;
-while ($i < @correct_results) {
-    my ($test, $result) = ($correct_names[$i], $correct_results[$i]);
+while ($i < @correct) {
+    my ($run_test, $test) = ($correct[$i], $correct_names[$i]);
+    $result = qx/$run_test/;
     $i++;
     if ($result =~ /^CORRECT/m) {
         $correct++;
@@ -59,10 +63,10 @@ while ($i < @correct_results) {
 print color('white');
 print "INCORRECT TESTS\n";
 my $total_incorrect = @incorrect;
-my @incorrect_results = run_tests(@incorrect);
 $i = 0;
-while ($i < @incorrect_results) {
-    my ($test, $result) = ($incorrect_names[$i], $incorrect_results[$i]);
+while ($i < @incorrect) {
+    my ($run_test, $test) = ($incorrect[$i], $incorrect_names[$i]);
+    $result = qx/$run_test/;
     $i++;
     if ($result =~ /^INCORRECT/m) {
         $incorrect++;
@@ -81,10 +85,3 @@ print "INCORRECT: $incorrect/$total_incorrect\n";
 print color('red');
 print ("FAILED TESTS:\n" . join("\n", @failed) . "\n") unless ($correct eq $total_correct and $incorrect eq $total_incorrect);
 print color('white');
-
-sub run_tests {
-    my @tests = (@_);
-    my @threads = map { async { return `$_` } } @tests;
-    return map { $_->join } @threads;
-}
-

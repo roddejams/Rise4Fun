@@ -3,7 +3,8 @@
 use strict;
 use warnings;
 
-my ($cp, $test) = @ARGV;
+my $cp = shift @ARGV;
+my $test = shift @ARGV;
 # Configurable timeout value
 my $timeout = shift @ARGV || 15;
 
