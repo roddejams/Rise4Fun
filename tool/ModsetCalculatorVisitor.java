@@ -84,6 +84,7 @@ public class ModsetCalculatorVisitor extends SimpleCBaseVisitor<Void> {
     @Override
     public Void visitWhileStmt(WhileStmtContext ctx) {
         internalScopes.openScope();
+        ctx.invariantAnnotations.forEach(this::visit);
         visit(ctx.body);
         internalScopes.closeScope();
         return null;

@@ -26,21 +26,18 @@ public class HoudiniVerifier {
                 //All procedures are correctly verified, we are done
                 return "CORRECT";
             }
-            VerificationResult result = null;
             if (!results.isEmpty()) {
                 VerificationResult res = results.remove();
                 if(res.getResult().equals("CORRECT")) {
                     procDetails.get(res.getProcName()).setVerified();
                     //TODO: Tell other shit to verify itself
                 } else {
-                    if (res.isActuallyIncorrect()) {
-                        // Actual bug, just return incorrect
-                        return "INCORRECT";
-                    } else {
-                        // Failed due to candidates - disable and reverify
-                        Set<String> failedPreds = res.getFailedPreds();
-                        procDetails.get(res.getProcName()).disableCandidates(failedPreds);
+                    // Failed due to candidates - disable and reverify
+                    Set<String> failedPreds = res.getFailedPreds();
+                    if(procDetails.get(res.getProcName()).disableCandidates(failedPreds)) {
                         verifyProc(res.getProcName());
+                    } else {
+                        return "INCORRECT";
                     }
                 }
             } else {

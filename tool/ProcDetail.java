@@ -97,14 +97,18 @@ public class ProcDetail {
         return candidateInvariants.get(ctx).isEnabled();
     }
 
-    public void disableCandidates(Set<String> failedPreds) {
+    // Returns true if we have disabled a candidate - i.e. need to re-verify
+    public boolean disableCandidates(Set<String> failedPreds) {
+        boolean candidatesDisabled = false;
         for (String pred : failedPreds) {
             for (CandidateInvariant cand : candidateInvariants.values()) {
                 if (cand.ownsPredicate(pred)) {
                     cand.disable();
+                    candidatesDisabled = true;
                 }
             }
         }
+        return candidatesDisabled;
     }
 
     public CandidateInvariant getCandidate(CandidateInvariantContext ctx) {

@@ -560,6 +560,8 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         String expr = "";
 
         //Assert invariant
+        invariants.clear();
+        enabledCandidateInvariants.clear();
         ctx.invariantAnnotations.forEach(this::visit);
         assertInvariants();
 
@@ -575,6 +577,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         //Assume Invariant
         invariants.clear();
+        enabledCandidateInvariants.clear();
         ctx.invariantAnnotations.forEach(this::visit);
         assumeInvariants();
 
@@ -596,6 +599,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         //Assert Invariant
         invariants.clear();
+        enabledCandidateInvariants.clear();
         ctx.invariantAnnotations.forEach(this::visit);
         assertInvariants();
 

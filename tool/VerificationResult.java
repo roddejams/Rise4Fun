@@ -14,9 +14,6 @@ public class VerificationResult {
     private String procName;
     private String result;
 
-    //TODO: Assertion class? More than 1. Wat
-    private Boolean actuallyIncorrect;
-
     private Set<String> failedPreds;
 
 
@@ -24,9 +21,6 @@ public class VerificationResult {
         this.procName = procName;
 
         failedPreds = new HashSet<>();
-
-        //TODO: This is broken yo
-        actuallyIncorrect = true;
     }
 
     public String getProcName() {
@@ -35,10 +29,6 @@ public class VerificationResult {
 
     public String getResult() {
         return result;
-    }
-
-    public Boolean isActuallyIncorrect() {
-        return actuallyIncorrect;
     }
 
     public Set<String> getFailedPreds() {
