@@ -1,15 +1,13 @@
 package tool;
 
+import candidate.Candidate;
 import parser.SimpleCParser;
 import parser.SimpleCParser.CandidateInvariantContext;
 import parser.SimpleCParser.EnsuresContext;
 import parser.SimpleCParser.RequiresContext;
 import candidate.CandidateInvariant;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class ProcDetail {
 
@@ -20,7 +18,7 @@ public class ProcDetail {
     private final Set<String> modset;
     private final List<String> args;
     private final Set<String> calledProcs;
-    private final List<CandidateInvariant> candidateInvariants;
+    private Map<CandidateInvariantContext, CandidateInvariant> candidateInvariants;
 
 
     public ProcDetail(SimpleCParser.ProcedureDeclContext ctx) {
@@ -31,7 +29,7 @@ public class ProcDetail {
         calledProcs = new HashSet<>();
         preConds = new ArrayList<>();
         postConds = new ArrayList<>();
-        candidateInvariants = new ArrayList<>();
+        candidateInvariants = new HashMap<>();
     }
 
     public void addPreCond(RequiresContext cond) {
@@ -91,6 +89,25 @@ public class ProcDetail {
     }
 
     public void addCandidateInvariant(CandidateInvariantContext ctx) {
-        candidateInvariants.add(new CandidateInvariant(ctx));
+        candidateInvariants.put(ctx, new CandidateInvariant());
+    }
+
+    public boolean candidateInvariantEnabled(CandidateInvariantContext ctx) {
+        // No null pointer here as summarisation visitor ensures all ctx's are added
+        return candidateInvariants.get(ctx).isEnabled();
+    }
+
+    public void disableCandidates(Set<String> failedPreds) {
+        for (String pred : failedPreds) {
+            for (CandidateInvariant cand : candidateInvariants.values()) {
+                if (cand.ownsPredicate(pred)) {
+                    cand.disable();
+                }
+            }
+        }
+    }
+
+    public CandidateInvariant getCandidate(CandidateInvariantContext ctx) {
+        return candidateInvariants.get(ctx);
     }
 }

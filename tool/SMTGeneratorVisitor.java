@@ -1,5 +1,7 @@
 package tool;
 
+import candidate.Candidate;
+import candidate.CandidateInvariant;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import parser.SimpleCBaseVisitor;
@@ -14,6 +16,8 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
     private final Stack<String> predicates;
 
+    private String procName;
+
     private boolean checkingIfLogicExpr;
     private final Stack<Boolean> isLogicExpr;
 
@@ -26,6 +30,8 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
     private String result = "";
     private boolean resultIsLogicExpr;
+
+    private int currentAssertID = 0;
 
     private static final Map<String, String> smtBinFuncs = new HashMap<>();
 
@@ -60,6 +66,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     private final Scopes scopes;
     private final Map<String, ProcDetail> procDetails;
     private final Set<String> invariants;
+    private final Set<CandidateInvariant> enabledCandidateInvariants;
 
     public SMTGeneratorVisitor(Set<String> globals, Map<String, ProcDetail> procDetails) {
         this.globals = globals;
@@ -79,6 +86,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         scopes = new Scopes();
         scopes.openScope();
+        enabledCandidateInvariants = new HashSet<>();
     }
 
     private Integer fresh(String varName) {
@@ -224,27 +232,25 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
             int idx = 0;
             int numAnds = asserts.size() - 1;
-            int assertionIndex = 0;
 
             for (Assertion assertStmt : asserts) {
                 String assertName;
                 if (assertStmt.getName() != null) {
                     assertName = assertStmt.getName();
                 } else {
-                    assertName = "assertCheck";
+                    assertName = getNextAssertPred();
                 }
-                assertCheckDefs += String.format("(declare-fun %s%s () Bool) \n", assertName, assertionIndex);
-                assertCheckGets += String.format("(get-value ( %s%s ))\n", assertName, assertionIndex);
+                assertCheckDefs += String.format("(declare-fun %s () Bool) \n", assertName);
+                assertCheckGets += String.format("(get-value ( %s ))\n", assertName);
 
-                assertChecks += String.format("(assert (= %s%s %s))\n", assertName, assertionIndex, assertStmt.getAssertion());
+                assertChecks += String.format("(assert (= %s %s))\n", assertName, assertStmt.getAssertion());
 
                 if (numAnds > idx) {
-                    expr += "(and " + assertName + assertionIndex + " ";
+                    expr += "(and " + assertName + " ";
                     ++idx;
                 } else {
-                    expr += assertName + assertionIndex;
+                    expr += assertName;
                 }
-                assertionIndex++;
             }
             for (int j = 0; j < numAnds; ++j) {
                 expr += ")";
@@ -269,10 +275,11 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     public String visitProcedureDecl(SimpleCParser.ProcedureDeclContext ctx) {
         StringBuilder builder = new StringBuilder();
 
+        procName = ctx.name.getText();
+
         // register global variables and proc args
         for (String var : globals) {
             builder.append(declareVar(var));
-            //builder.append("\n");
         }
 
         // proc scope
@@ -371,25 +378,29 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         return "";
     }
 
-    private String buildInvariants() {
-        String invariantStr = "";
+    private void assertInvariants() {
+        String predicates = buildPredicate();
+        String assumptions = buildAssumptions();
 
-        int idx = 0;
-        int numInvariants = invariants.size() - 1;
-
+        // Normal invariants
         for (String inv : invariants) {
-            if (numInvariants > idx) {
-                invariantStr += "(and " + inv + " ";
-                ++idx;
-            } else {
-                invariantStr += inv;
-            }
-        }
-        for (int i = 0; i < numInvariants; i++) {
-            invariantStr += ")";
+            String invariant = String.format("(=> (and %s %s) %s)", assumptions, predicates, inv);
+            asserts.add(new Assertion(invariant));
         }
 
-        return invariantStr;
+        // Candidate invariants
+        for (CandidateInvariant candidate : enabledCandidateInvariants) {
+            String invariant = String.format("(=> (and %s %s) %s)", assumptions, predicates, candidate.getExpr());
+            String predName = getNextAssertPred();
+            candidate.addPred(predName);
+            asserts.add(new Assertion(invariant, predName));
+        }
+    }
+
+    private String getNextAssertPred() {
+        String nextPred = "assertCheck" + currentAssertID;
+        currentAssertID++;
+        return nextPred;
     }
 
     private String buildAssumptions() {
@@ -550,8 +561,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         //Assert invariant
         ctx.invariantAnnotations.forEach(this::visit);
-        String invariantWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), buildInvariants());
-        asserts.add(new Assertion(invariantWithPred));
+        assertInvariants();
 
         //calculate modset
         ModsetCalculatorVisitor modsetCalculator = new ModsetCalculatorVisitor(scopes, procDetails);
@@ -563,15 +573,10 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             expr += getScopeFreeVar(var);
         }
 
-
-        IfStmtContext ifctx = new SimpleCParser.IfStmtContext(ctx.getParent(), 0);
-
-
         //Assume Invariant
         invariants.clear();
         ctx.invariantAnnotations.forEach(this::visit);
-        String assumeInvariant = String.format("(=> %s %s)", buildPredicate(), buildInvariants());
-        assumptions.add(assumeInvariant);
+        assumeInvariants();
 
         //Approximate the while loop with an if stmt
         String loopCond = visitLogicalExpr(ctx.condition);
@@ -592,8 +597,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         //Assert Invariant
         invariants.clear();
         ctx.invariantAnnotations.forEach(this::visit);
-        invariantWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), buildInvariants());
-        asserts.add(new Assertion(invariantWithPred));
+        assertInvariants();
 
         //Assume false
         String assumeFalse = String.format("(=> %s %s)", buildPredicate(), "false");
@@ -616,6 +620,18 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         return expr;
     }
 
+    private void assumeInvariants() {
+        String predicate = buildPredicate();
+
+        for (String inv : invariants) {
+            assumptions.add(String.format("(=> %s %s)", predicate, inv));
+        }
+
+        for(String inv : enabledCandidateInvariants.stream().map(Candidate::getExpr).collect(Collectors.toList())) {
+            assumptions.add(String.format("(=> %s %s)", predicate, inv));
+        }
+    }
+
     @Override
     public String visitBlockStmt(SimpleCParser.BlockStmtContext ctx) {
         scopes.openScope();
@@ -632,7 +648,18 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     public String visitInvariant(InvariantContext ctx) {
         String inv = visitLogicalExpr(ctx.condition);
         invariants.add(inv);
-        return "";
+        return null;
+    }
+
+    @Override
+    public String visitCandidateInvariant(CandidateInvariantContext ctx) {
+        if (procDetails.get(procName).candidateInvariantEnabled(ctx)) {
+            String expr = visitLogicalExpr(ctx.expr());
+            CandidateInvariant candidate = procDetails.get(procName).getCandidate(ctx);
+            candidate.setExpr(expr);
+            enabledCandidateInvariants.add(candidate);
+        }
+        return null;
     }
 
     private Map<String, Integer> copyMap(Map<String, Integer> map) {

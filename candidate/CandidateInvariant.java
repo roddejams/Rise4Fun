@@ -1,13 +1,9 @@
 package candidate;
 
-import parser.SimpleCParser.CandidateInvariantContext;
-
+// TODO: Is this really needed or is Candidate enough?
 public class CandidateInvariant extends Candidate {
 
-    private CandidateInvariantContext ctx;
-
-    public CandidateInvariant(CandidateInvariantContext ctx) {
+    public CandidateInvariant() {
         super();
-        this.ctx = ctx;
     }
 }

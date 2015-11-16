@@ -33,10 +33,14 @@ public class HoudiniVerifier {
                     procDetails.get(res.getProcName()).setVerified();
                     //TODO: Tell other shit to verify itself
                 } else {
-                    if (res.getActuallyIncorrect()) {
+                    if (res.isActuallyIncorrect()) {
                         // Actual bug, just return incorrect
-                        //TODO: Based on other things with candidates enabled?
                         return "INCORRECT";
+                    } else {
+                        // Failed due to candidates - disable and reverify
+                        Set<String> failedPreds = res.getFailedPreds();
+                        procDetails.get(res.getProcName()).disableCandidates(failedPreds);
+                        verifyProc(res.getProcName());
                     }
                 }
             } else {
