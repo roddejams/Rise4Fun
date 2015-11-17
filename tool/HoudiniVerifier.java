@@ -35,6 +35,7 @@ public class HoudiniVerifier {
                     // Failed due to candidates - disable and reverify
                     Set<String> failedPreds = res.getFailedPreds();
                     if(procDetails.get(res.getProcName()).disableCandidates(failedPreds)) {
+                        procDetails.get(res.getProcName()).clearAllPreds();
                         verifyProc(res.getProcName());
                     } else {
                         return "INCORRECT";

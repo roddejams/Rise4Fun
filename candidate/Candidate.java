@@ -20,6 +20,7 @@ public class Candidate {
     }
 
     public void disable() {
+        System.err.println("Disabling candidate that owns predicates " + ownedPredicates.toString());
         enabled = false;
     }
 
@@ -37,5 +38,9 @@ public class Candidate {
 
     public void addPred(String predName) {
         ownedPredicates.add(predName);
+    }
+
+    public void clearPreds() {
+        ownedPredicates.clear();
     }
 }

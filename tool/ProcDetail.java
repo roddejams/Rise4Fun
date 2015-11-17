@@ -1,8 +1,10 @@
 package tool;
 
 import candidate.Candidate;
+import candidate.CandidatePreCond;
 import parser.SimpleCParser;
 import parser.SimpleCParser.CandidateInvariantContext;
+import parser.SimpleCParser.CandidateRequiresContext;
 import parser.SimpleCParser.EnsuresContext;
 import parser.SimpleCParser.RequiresContext;
 import candidate.CandidateInvariant;
@@ -20,6 +22,7 @@ public class ProcDetail {
     private final Set<String> calledProcs;
     private Map<CandidateInvariantContext, CandidateInvariant> candidateInvariants;
 
+    private Map<String, Map<CandidateRequiresContext, CandidatePreCond>> othersPreconditions;
 
     public ProcDetail(SimpleCParser.ProcedureDeclContext ctx) {
         this.ctx = ctx;
@@ -113,5 +116,9 @@ public class ProcDetail {
 
     public CandidateInvariant getCandidate(CandidateInvariantContext ctx) {
         return candidateInvariants.get(ctx);
+    }
+
+    public void clearAllPreds() {
+        candidateInvariants.values().forEach(Candidate::clearPreds);
     }
 }
