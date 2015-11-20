@@ -2,17 +2,16 @@ package tool;
 
 import candidate.Candidate;
 import candidate.CandidatePreCond;
+import org.omg.PortableInterceptor.NON_EXISTENT;
 import parser.SimpleCParser;
-import parser.SimpleCParser.CandidateInvariantContext;
-import parser.SimpleCParser.CandidateRequiresContext;
-import parser.SimpleCParser.EnsuresContext;
-import parser.SimpleCParser.RequiresContext;
+import parser.SimpleCParser.*;
 import candidate.CandidateInvariant;
 
 import java.util.*;
 
 public class ProcDetail {
 
+    private static final int UNWINDING_INCREMENT = 1;
     private SimpleCParser.ProcedureDeclContext ctx;
     private Boolean verified;
     private List<RequiresContext> preConds;
@@ -23,6 +22,7 @@ public class ProcDetail {
     private Map<CandidateInvariantContext, CandidateInvariant> candidateInvariants;
 
     private Map<String, Map<CandidateRequiresContext, CandidatePreCond>> othersPreconditions;
+    private Map<WhileStmtContext, BMCLoopDetail> bmcLoops;
 
     public ProcDetail(SimpleCParser.ProcedureDeclContext ctx) {
         this.ctx = ctx;
@@ -101,17 +101,14 @@ public class ProcDetail {
     }
 
     // Returns true if we have disabled a candidate - i.e. need to re-verify
-    public boolean disableCandidates(Set<String> failedPreds) {
-        boolean candidatesDisabled = false;
+    public void disableCandidates(Set<String> failedPreds) {
         for (String pred : failedPreds) {
             for (CandidateInvariant cand : candidateInvariants.values()) {
                 if (cand.ownsPredicate(pred)) {
                     cand.disable();
-                    candidatesDisabled = true;
                 }
             }
         }
-        return candidatesDisabled;
     }
 
     public CandidateInvariant getCandidate(CandidateInvariantContext ctx) {
@@ -120,5 +117,51 @@ public class ProcDetail {
 
     public void clearAllPreds() {
         candidateInvariants.values().forEach(Candidate::clearPreds);
+    }
+
+    public void checkWithBMC(WhileStmtContext ctx, int unwindingDepth) {
+        bmcLoops.put(ctx, new BMCLoopDetail(unwindingDepth));
+    }
+
+    public boolean shouldCheckWithBMC(WhileStmtContext ctx) {
+        return bmcLoops.containsKey(ctx);
+    }
+
+    public BMCLoopDetail getBMCLoopDetail(WhileStmtContext ctx) {
+        return bmcLoops.get(ctx);
+    }
+
+    public Set<FailureType> getFailureType(Set<String> failedPreds) {
+
+        Set<FailureType> failures = new HashSet<>();
+
+        for (Iterator<String> it = failedPreds.iterator(); it.hasNext();) {
+            String failedPred = it.next();
+            for (CandidateInvariant inv : candidateInvariants.values()) {
+                if (inv.ownsPredicate(failedPred)) {
+                    failures.add(FailureType.CANDIDATE);
+                    it.remove();
+                }
+            }
+            for (BMCLoopDetail bmcLoopDet : bmcLoops.values()) {
+                if (bmcLoopDet.getOwnedPred().equals(failedPred)) {
+                    failures.add(FailureType.BMC);
+                    it.remove();
+                }
+            }
+        }
+        if (!failedPreds.isEmpty()) {
+            failures.add(FailureType.ASSERTION);
+        }
+
+        return failures;
+    }
+
+    public void updateBMCLoopDetails(Set<String> failedPreds) {
+        for (BMCLoopDetail bmcLoopDet : bmcLoops.values()) {
+            if (failedPreds.contains(bmcLoopDet.getOwnedPred())) {
+                bmcLoopDet.incUnwindingDepth(UNWINDING_INCREMENT);
+            }
+        }
     }
 }

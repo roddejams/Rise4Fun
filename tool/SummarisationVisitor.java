@@ -72,6 +72,16 @@ public class SummarisationVisitor extends ModsetCalculatorVisitor {
         return null;
     }
 
+    @Override
+    public Void visitWhileStmt(SimpleCParser.WhileStmtContext ctx) {
+        super.visitWhileStmt(ctx);
+
+        if (ctx.invariantAnnotations.isEmpty()) {
+            detail.checkWithBMC(ctx, 1);
+        }
+        return null;
+    }
+
     public Map<String, ProcDetail> getProcDetails() {
         return procDetails;
     }

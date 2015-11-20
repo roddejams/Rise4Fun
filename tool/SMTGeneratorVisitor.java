@@ -559,67 +559,108 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     public String visitWhileStmt(WhileStmtContext ctx) {
         String expr = "";
 
-        //Assert invariant
-        invariants.clear();
-        enabledCandidateInvariants.clear();
-        ctx.invariantAnnotations.forEach(this::visit);
-        assertInvariants();
+        if (procDetails.get(procName).shouldCheckWithBMC(ctx)) {
+            BMCLoopDetail detail = procDetails.get(procName).getBMCLoopDetail(ctx);
 
-        //calculate modset
-        ModsetCalculatorVisitor modsetCalculator = new ModsetCalculatorVisitor(scopes, procDetails);
-        modsetCalculator.visit(ctx);
-        Set<String> modset = modsetCalculator.getModset();
+            // generating cascading unwinding
+            for (int i = 0; i < detail.getUnwindingDepth(); ++i) {
+                // generate cond
+                String cond = visitLogicalExpr(ctx.condition);
 
-        //havoc the modset
-        for (String var : modset) {
-            expr += getScopeFreeVar(var);
-        }
+                predicates.push(cond);
+                expr += cond;
+                expr += visit(ctx.body);
+            }
+            // unwinding assertion generation
+            String cond = visitLogicalExpr(ctx.condition);
 
-        //Assume Invariant
-        invariants.clear();
-        enabledCandidateInvariants.clear();
-        ctx.invariantAnnotations.forEach(this::visit);
-        assumeInvariants();
+            predicates.push(cond);
+            expr += cond;
 
-        //Approximate the while loop with an if stmt
-        String loopCond = visitLogicalExpr(ctx.condition);
+            // assert false indicating the end of unwinding depth
+            String assertFalsePred = String.format("(=> (and %s %s) %s)",
+                    buildAssumptions(), buildPredicate(), "false");
+            String nextAssertId = getNextAssertPred();
+            asserts.add(new Assertion(assertFalsePred, nextAssertId));
+            detail.setOwnedPred(nextAssertId);
 
-        // originalMap used to restore global mapping
-        Map<String, Integer> originalMap = copyMap(mapping);
-        // initialMap used to pull off values for varIds before havocing the modset
-        Map<String, Integer> initialMap = copyMap(mapping);
-        Map<String, Integer> ifMap = copyMap(mapping);
+            // add assume false and block further execution
+            String assumeFalse = String.format("(=> %s %s)", buildPredicate(), "false");
+            assumptions.add(assumeFalse);
 
-        mapping = ifMap;
+            predicates.pop();
 
-        predicates.push(loopCond);
+            // close down the cascade
+            for (int i = 0; i < detail.getUnwindingDepth(); ++i) {
+                predicates.pop();
+            }
+            // TODO: generate if outcome, think about which maps to use etc.
 
-        //visit loop body
-        expr += visit(ctx.body);
+        } else {
 
-        //Assert Invariant
-        invariants.clear();
-        enabledCandidateInvariants.clear();
-        ctx.invariantAnnotations.forEach(this::visit);
-        assertInvariants();
+            //Assert invariant
+            invariants.clear();
+            enabledCandidateInvariants.clear();
+            ctx.invariantAnnotations.forEach(this::visit);
+            assertInvariants();
 
-        //Assume false
-        String assumeFalse = String.format("(=> %s %s)", buildPredicate(), "false");
-        assumptions.add(assumeFalse);
+            //calculate modset
+            ModsetCalculatorVisitor modsetCalculator = new ModsetCalculatorVisitor(scopes, procDetails);
+            modsetCalculator.visit(ctx);
+            Set<String> modset = modsetCalculator.getModset();
 
-        predicates.pop();
+            //havoc the modset
+            for (String var : modset) {
+                expr += getScopeFreeVar(var);
+            }
 
-        ifMap = mapping;
-        mapping = originalMap;
+            //Assume Invariant
+            invariants.clear();
+            enabledCandidateInvariants.clear();
+            ctx.invariantAnnotations.forEach(this::visit);
+            assumeInvariants();
 
-        //Apply the modset difference
-        for (String var : modset) {
-            expr += getScopeFreeVar(var);
-            expr += "\n";
-            String ifVar = ifMap.get(var) != null ? var + ifMap.get(var) : "(_ bv0 32)";
-            String elseVar = initialMap.get(var) != null ? var + initialMap.get(var) : var + originalMap.get(var);
-            expr += String.format("(assert (= %s (ite %s %s %s)))\n", var + mapping.get(var), loopCond,
-                    ifVar, elseVar);
+            //Approximate the while loop with an if stmt
+            String loopCond = visitLogicalExpr(ctx.condition);
+
+            // originalMap used to restore global mapping
+            Map<String, Integer> originalMap = copyMap(mapping);
+            // initialMap used to pull off values for varIds before havocing the modset
+            Map<String, Integer> initialMap = copyMap(mapping);
+            Map<String, Integer> ifMap = copyMap(mapping);
+
+            mapping = ifMap;
+
+            predicates.push(loopCond);
+
+            //visit loop body
+            expr += visit(ctx.body);
+
+            //Assert Invariant
+            invariants.clear();
+            enabledCandidateInvariants.clear();
+            ctx.invariantAnnotations.forEach(this::visit);
+            assertInvariants();
+
+            //Assume false
+            String assumeFalse = String.format("(=> %s %s)", buildPredicate(), "false");
+            assumptions.add(assumeFalse);
+
+            predicates.pop();
+
+            ifMap = mapping;
+            mapping = originalMap;
+
+            //Apply the modset difference
+            for (String var : modset) {
+                expr += getScopeFreeVar(var);
+                expr += "\n";
+                String ifVar = ifMap.get(var) != null ? var + ifMap.get(var) : "(_ bv0 32)";
+                String elseVar = initialMap.get(var) != null ? var + initialMap.get(var) : var + originalMap.get(var);
+                expr += String.format("(assert (= %s (ite %s %s %s)))\n", var + mapping.get(var), loopCond,
+                        ifVar, elseVar);
+            }
+
         }
         return expr;
     }

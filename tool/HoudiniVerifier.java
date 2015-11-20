@@ -28,18 +28,33 @@ public class HoudiniVerifier {
             }
             if (!results.isEmpty()) {
                 VerificationResult res = results.remove();
-                if(res.getResult().equals("CORRECT")) {
-                    procDetails.get(res.getProcName()).setVerified();
-                    //TODO: Tell other shit to verify itself
-                } else {
-                    // Failed due to candidates - disable and reverify
-                    Set<String> failedPreds = res.getFailedPreds();
-                    if(procDetails.get(res.getProcName()).disableCandidates(failedPreds)) {
-                        procDetails.get(res.getProcName()).clearAllPreds();
+                String z3Result = res.getResult();
+                ProcDetail procDetail = procDetails.get(res.getProcName());
+                switch (z3Result) {
+                    case "CORRECT":
+                        procDetail.setVerified();
+                        //TODO: Tell other shit to verify itself
+                        break;
+                    case "UNKNOWN":
+                        return "UNKNOWN";
+                    case "INCORRECT":
+                        //Incorrect cases
+                        // Failed due to candidates - disable and reverify
+                        Set<FailureType> failures = procDetail.getFailureType(res.getFailedPreds());
+                        if (failures.contains(FailureType.ASSERTION)) {
+                            return "INCORRECT";
+                        } else if (failures.contains(FailureType.CANDIDATE)) {
+                            procDetail.disableCandidates(res.getFailedPreds());
+                            procDetail.clearAllPreds();
+                        } else {
+                            procDetail.updateBMCLoopDetails(res.getFailedPreds());
+                        }
+                        // Failed due to candidates or BMC, submit for re-verification
                         verifyProc(res.getProcName());
-                    } else {
-                        return "INCORRECT";
-                    }
+                        break;
+                    default:
+                        System.err.println("Invalid status returned, probably Z3 error, pretending it's UNKNOWN");
+                        return "UNKNOWN";
                 }
             } else {
                     Thread.sleep(100);
