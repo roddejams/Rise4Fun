@@ -41,7 +41,7 @@ public class VerificationResult {
         try {
             z3Result = process.execute(in, TIMEOUT);
         } catch (ProcessTimeoutException | IOException | InterruptedException e) {
-            result = "unknown";
+            result = "UNKNOWN";
             return;
         }
         System.err.println("result: " + z3Result);
