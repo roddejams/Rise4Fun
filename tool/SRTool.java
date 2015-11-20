@@ -1,5 +1,6 @@
 package tool;
 
+import com.google.common.collect.Iterables;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import parser.SimpleCLexer;
@@ -9,6 +10,9 @@ import parser.SimpleCParser.ProgramContext;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 public class SRTool {
 
@@ -41,13 +45,21 @@ public class SRTool {
         tc.getGlobals().forEach(globalScope::add);
         SummarisationVisitor summarisationVisitor = new SummarisationVisitor(globalScope);
 
-        for(ProcedureDeclContext proc : ctx.procedures) {
-            summarisationVisitor.visit(proc);
-        }
+		boolean procDetailsChanged = true;
+		Map<String, ProcDetail> procDetails = new HashMap<>();
+
+		while(procDetailsChanged) {
+			procDetailsChanged = false;
+			ctx.procedures.forEach(summarisationVisitor::visit);
+			if(!procDetails.equals(summarisationVisitor.getProcDetails())) {
+				procDetailsChanged = true;
+				procDetails = summarisationVisitor.getProcDetails();
+			}
+		}
 
         // Verify
         HoudiniVerifier verifier = new HoudiniVerifier(POOL_SIZE, tc.getGlobals(),
-                summarisationVisitor.getProcDetails());
+                procDetails);
 
         System.out.println(verifier.verify());
         System.exit(0);

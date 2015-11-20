@@ -33,6 +33,8 @@ public class ProcDetail {
         preConds = new ArrayList<>();
         postConds = new ArrayList<>();
         candidateInvariants = new HashMap<>();
+        othersPreconditions = new HashMap<>();
+        bmcLoops = new HashMap<>();
     }
 
     public void addPreCond(RequiresContext cond) {
@@ -163,5 +165,42 @@ public class ProcDetail {
                 bmcLoopDet.incUnwindingDepth(UNWINDING_INCREMENT);
             }
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ProcDetail that = (ProcDetail) o;
+
+        if (ctx != null ? !ctx.equals(that.ctx) : that.ctx != null) return false;
+        if (verified != null ? !verified.equals(that.verified) : that.verified != null) return false;
+        if (preConds != null ? !preConds.equals(that.preConds) : that.preConds != null) return false;
+        if (postConds != null ? !postConds.equals(that.postConds) : that.postConds != null) return false;
+        if (modset != null ? !modset.equals(that.modset) : that.modset != null) return false;
+        if (args != null ? !args.equals(that.args) : that.args != null) return false;
+        if (calledProcs != null ? !calledProcs.equals(that.calledProcs) : that.calledProcs != null) return false;
+        if (candidateInvariants != null ? !candidateInvariants.equals(that.candidateInvariants) : that.candidateInvariants != null)
+            return false;
+        if (othersPreconditions != null ? !othersPreconditions.equals(that.othersPreconditions) : that.othersPreconditions != null)
+            return false;
+        return !(bmcLoops != null ? !bmcLoops.equals(that.bmcLoops) : that.bmcLoops != null);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = ctx != null ? ctx.hashCode() : 0;
+        result = 31 * result + (verified != null ? verified.hashCode() : 0);
+        result = 31 * result + (preConds != null ? preConds.hashCode() : 0);
+        result = 31 * result + (postConds != null ? postConds.hashCode() : 0);
+        result = 31 * result + (modset != null ? modset.hashCode() : 0);
+        result = 31 * result + (args != null ? args.hashCode() : 0);
+        result = 31 * result + (calledProcs != null ? calledProcs.hashCode() : 0);
+        result = 31 * result + (candidateInvariants != null ? candidateInvariants.hashCode() : 0);
+        result = 31 * result + (othersPreconditions != null ? othersPreconditions.hashCode() : 0);
+        result = 31 * result + (bmcLoops != null ? bmcLoops.hashCode() : 0);
+        return result;
     }
 }
