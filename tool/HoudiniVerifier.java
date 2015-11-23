@@ -40,14 +40,15 @@ public class HoudiniVerifier {
                     case "INCORRECT":
                         //Incorrect cases
                         // Failed due to candidates - disable and reverify
+                        Set<String> failedPreds = new HashSet<>(res.getFailedPreds());
                         Set<FailureType> failures = procDetail.getFailureType(res.getFailedPreds());
                         if (failures.contains(FailureType.ASSERTION)) {
                             return "INCORRECT";
                         } else if (failures.contains(FailureType.CANDIDATE)) {
-                            procDetail.disableCandidates(res.getFailedPreds());
+                            procDetail.disableCandidates(failedPreds);
                             procDetail.clearAllPreds();
                         } else {
-                            procDetail.updateBMCLoopDetails(res.getFailedPreds());
+                            procDetail.updateBMCLoopDetails(failedPreds);
                         }
                         // Failed due to candidates or BMC, submit for re-verification
                         verifyProc(res.getProcName());

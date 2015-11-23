@@ -9,6 +9,7 @@ import candidate.CandidateInvariant;
 
 import java.util.*;
 
+//God object v2
 public class ProcDetail {
 
     private static final int UNWINDING_INCREMENT = 1;
@@ -168,6 +169,7 @@ public class ProcDetail {
     }
 
     @Override
+    //rise4fun
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
