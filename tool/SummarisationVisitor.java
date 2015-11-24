@@ -50,13 +50,13 @@ public class SummarisationVisitor extends ModsetCalculatorVisitor {
 
     @Override
     public Void visitCandidateRequires(SimpleCParser.CandidateRequiresContext ctx) {
-        //TODO: Deal with candidates
+        detail.addCandidatePrecond(ctx);
         return null;
     }
 
     @Override
     public Void visitCandidateEnsures(SimpleCParser.CandidateEnsuresContext ctx) {
-        //TODO: Deal with candidates
+        detail.addCandidatePostcond(ctx);
         return null;
     }
 

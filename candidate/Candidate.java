@@ -4,13 +4,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class Candidate {
-
-
     protected Boolean enabled;
     protected Set<String> ownedPredicates;
     protected String expr;
 
-    protected Candidate () {
+    public Candidate () {
         enabled = true;
         ownedPredicates = new HashSet<>();
     }

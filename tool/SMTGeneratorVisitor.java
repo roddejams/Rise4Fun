@@ -296,6 +296,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             if (preCond.requires() != null) {
                 visitRequires(preCond.requires());
             }
+            if (preCond.candidateRequires() != null) {
+                visitCandidateRequires(preCond.candidateRequires());
+            }
         }
 
         for (SimpleCParser.StmtContext stmt : ctx.stmts) {
@@ -311,6 +314,9 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         for (SimpleCParser.PrepostContext postCond : ctx.contract) {
             if (postCond.ensures() != null) {
                 visitEnsures(postCond.ensures());
+            }
+            if(postCond.candidateEnsures() != null) {
+                visitCandidateEnsures(postCond.candidateEnsures());
             }
         }
 
@@ -721,9 +727,47 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
     public String visitCandidateInvariant(CandidateInvariantContext ctx) {
         if (procDetails.get(procName).candidateInvariantEnabled(ctx)) {
             String expr = visitLogicalExpr(ctx.expr());
-            CandidateInvariant candidate = procDetails.get(procName).getCandidate(ctx);
+            CandidateInvariant candidate = procDetails.get(procName).getCandidateInvariant(ctx);
             candidate.setExpr(expr);
             enabledCandidateInvariants.add(candidate);
+        }
+        return null;
+    }
+
+    @Override
+    public String visitCandidateRequires(CandidateRequiresContext ctx) {
+        if(procDetails.get(procName).candidatePrecondEnabled(ctx)) {
+            String expr = visitLogicalExpr(ctx.expr());
+            Candidate candidate = procDetails.get(procName).getCandidatePrecond(ctx);
+            candidate.setExpr(expr);
+
+            if(inCallSummarisation) {
+                String assertWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), expr);
+                String predName = getNextAssertPred();
+                candidate.addPred(predName);
+                asserts.add(new Assertion(assertWithPred, predName));
+            } else {
+                assumptions.add(expr);
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public String visitCandidateEnsures(CandidateEnsuresContext ctx) {
+        if(procDetails.get(procName).candidatePostcondEnabled(ctx)) {
+            String expr = visitLogicalExpr(ctx.expr());
+            Candidate candidate = procDetails.get(procName).getCandidatePostcond(ctx);
+            candidate.setExpr(expr);
+
+            if(inCallSummarisation) {
+                assumptions.add(expr);
+            } else {
+                String assertWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), expr);
+                String predName = getNextAssertPred();
+                candidate.addPred(predName);
+                asserts.add(new Assertion(assertWithPred, predName));
+            }
         }
         return null;
     }
