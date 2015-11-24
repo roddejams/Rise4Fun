@@ -19,6 +19,7 @@ int foo(int a, int b)
   ensures g == \old(g) * 2
  {
    int t;
+   
    t = min(a, b);
    if(t == a) {
      g = g * 2;
