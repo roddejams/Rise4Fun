@@ -108,4 +108,8 @@ public class ModsetCalculatorVisitor extends SimpleCBaseVisitor<Void> {
     public Set<String> getModset() {
         return modset;
     }
+
+    public void clearModset() {
+        modset.clear();
+    }
 }

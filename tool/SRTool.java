@@ -50,7 +50,10 @@ public class SRTool {
 
 		while(procDetailsChanged) {
 			procDetailsChanged = false;
-			ctx.procedures.forEach(summarisationVisitor::visit);
+			ctx.procedures.forEach(procedure -> {
+				summarisationVisitor.visit(procedure);
+				summarisationVisitor.clearModset();
+			});
 			if(!procDetails.equals(summarisationVisitor.getProcDetails())) {
 				procDetailsChanged = true;
 				procDetails = summarisationVisitor.getProcDetails();
