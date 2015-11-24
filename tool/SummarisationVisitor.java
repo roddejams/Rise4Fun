@@ -62,6 +62,8 @@ public class SummarisationVisitor extends ModsetCalculatorVisitor {
 
     @Override
     public Void visitCallStmt(SimpleCParser.CallStmtContext ctx) {
+        super.visitCallStmt(ctx);
+
         detail.addCalledProc(ctx.callee.getText());
         return null;
     }

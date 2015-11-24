@@ -63,7 +63,10 @@ public class ModsetCalculatorVisitor extends SimpleCBaseVisitor<Void> {
 
     @Override
     public Void visitCallStmt(CallStmtContext ctx) {
-        modset.addAll(procDetails.get(ctx.callee.getText()).getModset());
+        String callee = ctx.callee.getText();
+        if(procDetails.get(callee) != null) {
+            modset.addAll(procDetails.get(ctx.callee.getText()).getModset());
+        }
 
         String varName = ctx.lhs.ident.getText();
 
