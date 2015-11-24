@@ -598,6 +598,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             // add assume false and block further execution
             String assumeFalse = String.format("(=> %s %s)", buildPredicate(), "false");
             assumptions.add(assumeFalse);
+            predicates.pop();
 
             // close down the cascade
             for (int i = 0; i < detail.getUnwindingDepth(); ++i) {
