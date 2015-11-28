@@ -1,8 +1,7 @@
 package tool;
 
 import candidate.Candidate;
-import candidate.CandidatePreCond;
-import org.omg.PortableInterceptor.NON_EXISTENT;
+import candidate.CandidatePrePostCond;
 import parser.SimpleCParser;
 import parser.SimpleCParser.*;
 import candidate.CandidateInvariant;
@@ -22,10 +21,9 @@ public class ProcDetail {
     private final Set<String> calledProcs;
     private Map<CandidateInvariantContext, CandidateInvariant> candidateInvariants;
 
-    private Map<CandidateEnsuresContext, Candidate> candidateEnsures;
-    private Map<CandidateRequiresContext, Candidate> candidateRequires;
+    private Map<CandidateEnsuresContext, CandidatePrePostCond> candidateEnsures;
+    private Map<CandidateRequiresContext, CandidatePrePostCond> candidateRequires;
 
-    private Map<String, Map<CandidateRequiresContext, CandidatePreCond>> othersPreconditions;
     private Map<WhileStmtContext, BMCLoopDetail> bmcLoops;
 
     public ProcDetail(SimpleCParser.ProcedureDeclContext ctx) {
@@ -39,7 +37,6 @@ public class ProcDetail {
         candidateInvariants = new HashMap<>();
         candidateRequires = new HashMap<>();
         candidateEnsures = new HashMap<>();
-        othersPreconditions = new HashMap<>();
         bmcLoops = new HashMap<>();
     }
 
@@ -109,7 +106,7 @@ public class ProcDetail {
     }
 
     public void addCandidatePrecond(CandidateRequiresContext ctx) {
-        candidateRequires.put(ctx, new Candidate());
+        candidateRequires.put(ctx, new CandidatePrePostCond());
     }
 
     public boolean candidatePrecondEnabled(CandidateRequiresContext ctx) {
@@ -117,7 +114,7 @@ public class ProcDetail {
     }
 
     public void addCandidatePostcond(CandidateEnsuresContext ctx) {
-        candidateEnsures.put(ctx, new Candidate());
+        candidateEnsures.put(ctx, new CandidatePrePostCond());
     }
 
     public boolean candidatePostcondEnabled(CandidateEnsuresContext ctx) {
@@ -125,20 +122,20 @@ public class ProcDetail {
     }
 
     // Returns true if we have disabled a candidate - i.e. need to re-verify
-    public void disableCandidates(Set<String> failedPreds) {
+    public void disableCandidates(Set<String> failedPreds, String procName) {
         for (String pred : failedPreds) {
             for (CandidateInvariant cand : candidateInvariants.values()) {
                 if (cand.ownsPredicate(pred)) {
                     cand.disable();
                 }
             }
-            for (Candidate cand : candidateRequires.values()) {
-                if (cand.ownsPredicate(pred)) {
+            for (CandidatePrePostCond cand : candidateRequires.values()) {
+                if (cand.ownsPredicate(pred, procName)) {
                     cand.disable();
                 }
             }
-            for (Candidate cand : candidateEnsures.values()) {
-                if (cand.ownsPredicate(pred)) {
+            for (CandidatePrePostCond cand : candidateEnsures.values()) {
+                if (cand.ownsPredicate(pred, procName)) {
                     cand.disable();
                 }
             }
@@ -149,16 +146,26 @@ public class ProcDetail {
         return candidateInvariants.get(ctx);
     }
 
-    public Candidate getCandidatePrecond(CandidateRequiresContext ctx) {
+    public CandidatePrePostCond getCandidatePrecond(CandidateRequiresContext ctx) {
         return candidateRequires.get(ctx);
     }
 
-    public Candidate getCandidatePostcond(CandidateEnsuresContext ctx) {
+    public Map<CandidateRequiresContext, CandidatePrePostCond> getCandidateRequires() {
+        return candidateRequires;
+    }
+
+    public CandidatePrePostCond getCandidatePostcond(CandidateEnsuresContext ctx) {
         return candidateEnsures.get(ctx);
     }
 
-    public void clearAllPreds() {
-        candidateInvariants.values().forEach(Candidate::clearPreds);
+    public Map<CandidateEnsuresContext, CandidatePrePostCond> getCandidateEnsures() {
+        return candidateEnsures;
+    }
+
+    public void clearAllPreds(String procName) {
+        candidateInvariants.values().forEach(CandidateInvariant::clearPreds);
+        candidateEnsures.values().forEach(pred -> pred.clearPreds(procName));
+        candidateRequires.values().forEach(pred -> pred.clearPreds(procName));
     }
 
     public void checkWithBMC(WhileStmtContext ctx, int unwindingDepth) {
@@ -173,7 +180,11 @@ public class ProcDetail {
         return bmcLoops.get(ctx);
     }
 
-    public Set<FailureType> getFailureType(Set<String> failedPreds) {
+    public Set<String> getCalledProcs() {
+        return calledProcs;
+    }
+
+    public Set<FailureType> getFailureType(Set<String> failedPreds, String procName) {
 
         Set<FailureType> failures = new HashSet<>();
 
@@ -181,19 +192,19 @@ public class ProcDetail {
             String failedPred = it.next();
             for (CandidateInvariant inv : candidateInvariants.values()) {
                 if (inv.ownsPredicate(failedPred)) {
-                    failures.add(FailureType.CANDIDATE);
+                    failures.add(FailureType.CANDIDATE_INVARIANT);
                     it.remove();
                 }
             }
-            for (Candidate inv : candidateEnsures.values()) {
-                if (inv.ownsPredicate(failedPred)) {
-                    failures.add(FailureType.CANDIDATE);
+            for (CandidatePrePostCond inv : candidateEnsures.values()) {
+                if (inv.ownsPredicate(failedPred, procName)) {
+                    failures.add(FailureType.CANDIDATE_POST);
                     it.remove();
                 }
             }
-            for (Candidate inv : candidateRequires.values()) {
-                if (inv.ownsPredicate(failedPred)) {
-                    failures.add(FailureType.CANDIDATE);
+            for (CandidatePrePostCond inv : candidateRequires.values()) {
+                if (inv.ownsPredicate(failedPred, procName)) {
+                    failures.add(FailureType.CANDIDATE_PRE);
                     it.remove();
                 }
             }
@@ -203,9 +214,6 @@ public class ProcDetail {
                     it.remove();
                 }
             }
-        }
-        if (!failedPreds.isEmpty()) {
-            failures.add(FailureType.ASSERTION);
         }
 
         return failures;
@@ -236,8 +244,6 @@ public class ProcDetail {
         if (calledProcs != null ? !calledProcs.equals(that.calledProcs) : that.calledProcs != null) return false;
         if (candidateInvariants != null ? !candidateInvariants.equals(that.candidateInvariants) : that.candidateInvariants != null)
             return false;
-        if (othersPreconditions != null ? !othersPreconditions.equals(that.othersPreconditions) : that.othersPreconditions != null)
-            return false;
         return !(bmcLoops != null ? !bmcLoops.equals(that.bmcLoops) : that.bmcLoops != null);
 
     }
@@ -252,7 +258,6 @@ public class ProcDetail {
         result = 31 * result + (args != null ? args.hashCode() : 0);
         result = 31 * result + (calledProcs != null ? calledProcs.hashCode() : 0);
         result = 31 * result + (candidateInvariants != null ? candidateInvariants.hashCode() : 0);
-        result = 31 * result + (othersPreconditions != null ? othersPreconditions.hashCode() : 0);
         result = 31 * result + (bmcLoops != null ? bmcLoops.hashCode() : 0);
         return result;
     }

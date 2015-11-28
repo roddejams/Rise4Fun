@@ -2,6 +2,7 @@ package tool;
 
 public enum FailureType {
     BMC,
-    CANDIDATE,
-    ASSERTION,
+    CANDIDATE_INVARIANT,
+    CANDIDATE_PRE,
+    CANDIDATE_POST,
 }

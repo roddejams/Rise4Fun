@@ -2,6 +2,7 @@ package tool;
 
 import candidate.Candidate;
 import candidate.CandidateInvariant;
+import candidate.CandidatePrePostCond;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import parser.SimpleCBaseVisitor;
@@ -297,7 +298,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 visitRequires(preCond.requires());
             }
             if (preCond.candidateRequires() != null) {
-                visitCandidateRequires(preCond.candidateRequires());
+                addCandidateRequires(preCond.candidateRequires());
             }
         }
 
@@ -316,7 +317,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                 visitEnsures(postCond.ensures());
             }
             if(postCond.candidateEnsures() != null) {
-                visitCandidateEnsures(postCond.candidateEnsures());
+                addCandidateEnsures(postCond.candidateEnsures());
             }
         }
 
@@ -481,6 +482,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         inCallSummarisation = true;
         //visit precondition with arguments replaced with actuals
         details.getPreConds().forEach(this::visit);
+        details.getCandidateRequires().keySet().forEach(req -> addCandidateRequires(req, ctx.callee.getText()));
 
         //havoc the modset
         for(String varName : details.getModset()) {
@@ -497,6 +499,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
         //visit the postcondition with \result replaced with bar_ret
         details.getPostConds().forEach(this::visit);
+        details.getCandidateEnsures().keySet().forEach(ens -> addCandidateEnsures(ens, ctx.callee.getText()));
 
         // Assign the lhs to the temporary return variable
         String varName = scopes.getVariable(ctx.lhs.ident.getText());
@@ -734,30 +737,44 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         return null;
     }
 
-    @Override
-    public String visitCandidateRequires(CandidateRequiresContext ctx) {
+    public void addCandidateRequires(CandidateRequiresContext ctx) {
         if(procDetails.get(procName).candidatePrecondEnabled(ctx)) {
             String expr = visitLogicalExpr(ctx.expr());
-            Candidate candidate = procDetails.get(procName).getCandidatePrecond(ctx);
+            CandidatePrePostCond candidate = procDetails.get(procName).getCandidatePrecond(ctx);
             candidate.setExpr(expr);
 
             if(inCallSummarisation) {
                 String assertWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), expr);
                 String predName = getNextAssertPred();
-                candidate.addPred(predName);
+                candidate.addPred(predName, procName);
                 asserts.add(new Assertion(assertWithPred, predName));
             } else {
                 assumptions.add(expr);
             }
         }
-        return null;
     }
 
-    @Override
-    public String visitCandidateEnsures(CandidateEnsuresContext ctx) {
+    public void addCandidateRequires(CandidateRequiresContext ctx, String calleeName) {
+        if(procDetails.get(calleeName).candidatePrecondEnabled(ctx)) {
+            String expr = visitLogicalExpr(ctx.expr());
+            CandidatePrePostCond candidate = procDetails.get(calleeName).getCandidatePrecond(ctx);
+            candidate.setExpr(expr);
+
+            if(inCallSummarisation) {
+                String assertWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), expr);
+                String predName = getNextAssertPred();
+                candidate.addPred(predName, procName);
+                asserts.add(new Assertion(assertWithPred, predName));
+            } else {
+                assumptions.add(expr);
+            }
+        }
+    }
+
+    public void addCandidateEnsures(CandidateEnsuresContext ctx) {
         if(procDetails.get(procName).candidatePostcondEnabled(ctx)) {
             String expr = visitLogicalExpr(ctx.expr());
-            Candidate candidate = procDetails.get(procName).getCandidatePostcond(ctx);
+            CandidatePrePostCond candidate = procDetails.get(procName).getCandidatePostcond(ctx);
             candidate.setExpr(expr);
 
             if(inCallSummarisation) {
@@ -765,11 +782,27 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             } else {
                 String assertWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), expr);
                 String predName = getNextAssertPred();
-                candidate.addPred(predName);
+                candidate.addPred(predName, procName);
                 asserts.add(new Assertion(assertWithPred, predName));
             }
         }
-        return null;
+    }
+
+    public void addCandidateEnsures(CandidateEnsuresContext ctx, String calleeName) {
+        if(procDetails.get(calleeName).candidatePostcondEnabled(ctx)) {
+            String expr = visitLogicalExpr(ctx.expr());
+            CandidatePrePostCond candidate = procDetails.get(calleeName).getCandidatePostcond(ctx);
+            candidate.setExpr(expr);
+
+            if(inCallSummarisation) {
+                assumptions.add(expr);
+            } else {
+                String assertWithPred = String.format("(=> (and %s %s) %s)", buildAssumptions(), buildPredicate(), expr);
+                String predName = getNextAssertPred();
+                candidate.addPred(predName, procName);
+                asserts.add(new Assertion(assertWithPred, predName));
+            }
+        }
     }
 
     private Map<String, Integer> copyMap(Map<String, Integer> map) {
