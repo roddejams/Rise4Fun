@@ -652,14 +652,12 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
             ctx.invariantAnnotations.forEach(this::visit);
             assumeInvariants();
 
-            //Approximate the while loop with an if stmt
-            String loopCond = visitLogicalExpr(ctx.condition);
-
             // initialMap used to pull off values for varIds before havocing the modset
             Map<String, Integer> initialMap = copyMap(mapping);
             Map<String, Integer> ifMap = copyMap(mapping);
 
-            mapping = ifMap;
+            //Approximate the while loop with an if stmt
+            String loopCond = visitLogicalExpr(ctx.condition);
 
             predicates.push(loopCond);
 
