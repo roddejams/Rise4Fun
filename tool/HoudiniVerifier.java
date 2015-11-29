@@ -11,10 +11,12 @@ public class HoudiniVerifier {
     private Queue<VerificationResult> results;
     private Set<String> globals;
     private Map<String, ProcDetail> procDetails;
+    private Map<String, Future<?>> runningVerifications;
 
     public HoudiniVerifier(int poolSize, Set<String> globals, Map<String, ProcDetail> procDetails) {
         executor = Executors.newFixedThreadPool(poolSize);
         results = new ConcurrentLinkedDeque<>();
+        runningVerifications = new HashMap<>();
         this.globals = globals;
         this.procDetails = procDetails;
     }
@@ -35,6 +37,8 @@ public class HoudiniVerifier {
                 String procName = res.getProcName();
                 ProcDetail procDetail = procDetails.get(procName);
                 switch (z3Result) {
+                    case "INTERRUPTED":
+                        break;
                     case "CORRECT":
                         procDetail.setVerified();
                         //TODO: Tell other shit to verify itself
@@ -88,7 +92,7 @@ public class HoudiniVerifier {
                         return "UNKNOWN";
                 }
             } else {
-                    Thread.sleep(100);
+                Thread.sleep(100);
             }
         }
     }
@@ -112,9 +116,12 @@ public class HoudiniVerifier {
     }
 
     public void verifyProc(String proc) {
+        if(runningVerifications.containsKey(proc)) {
+            runningVerifications.get(proc).cancel(true);
+        }
         procDetails.get(proc).setUnverified();
         VCGenerator vc = new VCGenerator(procDetails.get(proc).getCtx(), globals, procDetails);
         VerificationRunner runner = new VerificationRunner(proc, vc, results);
-        executor.submit(runner);
+        runningVerifications.put(proc, executor.submit(runner));
     }
 }
