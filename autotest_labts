@@ -1,0 +1,85 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use threads;
+use Term::ANSIColor;
+use Readonly;
+
+# Process timeout
+Readonly my $TIMEOUT => 60;
+
+my $correct = 0;
+my $incorrect = 0;
+
+my @correct;
+my @incorrect;
+
+my @correct_names;
+my @incorrect_names;
+
+my @failed;
+
+# Build stuff
+qx/.\/build.sh/;
+
+foreach my $dir (qw(./labts_tests/correct ./labts_tests/incorrect)) {
+opendir(DIR, $dir);
+    while (my $file = readdir(DIR)) {
+        next if $file =~ m/^\./;
+        if($dir =~ /\/correct/) {
+            push @correct, ".\/srtool . $dir/$file $TIMEOUT 2>/dev/null";
+            push @correct_names, $file;
+        } else {
+            push @incorrect, ".\/srtool . $dir/$file $TIMEOUT 2>/dev/null";
+            push @incorrect_names, $file;
+        }
+    }
+}
+
+my $result;
+
+print "CORRECT TESTS\n";
+my $total_correct = @correct;
+my $i = 0;
+while ($i < @correct) {
+    my ($run_test, $test) = ($correct[$i], $correct_names[$i]);
+    $result = qx/$run_test/;
+    $i++;
+    if ($result =~ /^CORRECT/m) {
+        $correct++;
+        print color('green');
+        print "$test passed test\n";
+    } else {
+        print color('red');
+        print "$test failed test\n";
+        push @failed, $test;
+    }
+}
+
+print color('white');
+print "INCORRECT TESTS\n";
+my $total_incorrect = @incorrect;
+$i = 0;
+while ($i < @incorrect) {
+    my ($run_test, $test) = ($incorrect[$i], $incorrect_names[$i]);
+    $result = qx/$run_test/;
+    $i++;
+    if ($result =~ /^INCORRECT/m) {
+        $incorrect++;
+        print color('green');
+        print "$test passed test\n";
+    } else {
+        print color('red');
+        print "$test failed test\n";
+        push @failed, $test;
+    }
+}
+
+print color('white');
+print "CORRECT: $correct/$total_correct\n";
+print "INCORRECT: $incorrect/$total_incorrect\n";
+print color('red');
+print ("FAILED TESTS:\n" . join("\n", @failed) . "\n") unless ($correct eq $total_correct and $incorrect eq $total_incorrect);
+print color('white');
