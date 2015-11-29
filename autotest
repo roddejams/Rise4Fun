@@ -8,7 +8,7 @@ use Term::ANSIColor;
 use Readonly;
 
 # Process timeout
-Readonly my $TIMEOUT => 10;
+Readonly my $TIMEOUT => 60;
 
 my $correct = 0;
 my $incorrect = 0;
