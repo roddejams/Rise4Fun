@@ -38,10 +38,11 @@ public class HoudiniVerifier {
                 ProcDetail procDetail = procDetails.get(procName);
                 switch (z3Result) {
                     case "INTERRUPTED":
+                        procDetail.clearAllPreds(procName);
                         break;
                     case "CORRECT":
                         procDetail.setVerified();
-                        //TODO: Tell other shit to verify itself
+                        runningVerifications.remove(procName);
                         break;
                     case "UNKNOWN":
                         return "UNKNOWN";
@@ -82,9 +83,11 @@ public class HoudiniVerifier {
                         }
                         if(failures.contains(FailureType.BMC)) {
                             procDetail.updateBMCLoopDetails(failedPreds);
+                            procDetail.clearAllPreds(procName);
                         }
                         // Failed due to candidates or BMC, submit for re-verification
                         verifyProc(procName);
+                        runningVerifications.remove(procName);
                         break;
 
                     default:

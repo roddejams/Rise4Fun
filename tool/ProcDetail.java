@@ -166,6 +166,7 @@ public class ProcDetail {
         candidateInvariants.values().forEach(CandidateInvariant::clearPreds);
         candidateEnsures.values().forEach(pred -> pred.clearPreds(procName));
         candidateRequires.values().forEach(pred -> pred.clearPreds(procName));
+        bmcLoops.values().forEach(BMCLoopDetail::clearOwnedPred);
     }
 
     public void checkWithBMC(WhileStmtContext ctx, int unwindingDepth) {
@@ -209,7 +210,7 @@ public class ProcDetail {
                 }
             }
             for (BMCLoopDetail bmcLoopDet : bmcLoops.values()) {
-                if (bmcLoopDet.getOwnedPred().equals(failedPred)) {
+                if (bmcLoopDet.getOwnedPred().contains(failedPred)) {
                     failures.add(FailureType.BMC);
                     it.remove();
                 }
@@ -221,8 +222,11 @@ public class ProcDetail {
 
     public void updateBMCLoopDetails(Set<String> failedPreds) {
         for (BMCLoopDetail bmcLoopDet : bmcLoops.values()) {
-            if (failedPreds.contains(bmcLoopDet.getOwnedPred())) {
-                bmcLoopDet.incUnwindingDepth(UNWINDING_INCREMENT);
+            for(String ownedPred : bmcLoopDet.getOwnedPred()) {
+                if (failedPreds.contains(ownedPred)) {
+                    bmcLoopDet.incUnwindingDepth(UNWINDING_INCREMENT);
+                    break;
+                }
             }
         }
     }

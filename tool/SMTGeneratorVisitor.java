@@ -602,7 +602,7 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
                     buildAssumptions(), buildPredicate(), "false");
             String nextAssertId = getNextAssertPred();
             asserts.add(new Assertion(assertFalsePred, nextAssertId));
-            detail.setOwnedPred(nextAssertId);
+            detail.addOwnedPred(nextAssertId);
 
             // add assume false and block further execution
             String assumeFalse = String.format("(=> %s %s)", buildPredicate(), "false");
