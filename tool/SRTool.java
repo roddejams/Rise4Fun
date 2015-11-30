@@ -13,10 +13,12 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.*;
 
 public class SRTool {
 
     private static final int POOL_SIZE = 2;
+	private static final int TIMEOUT = 30;
 
 	public static void main(String[] args) throws IOException, InterruptedException {
         String filename = args[0];
@@ -64,7 +66,16 @@ public class SRTool {
         HoudiniVerifier verifier = new HoudiniVerifier(POOL_SIZE, tc.getGlobals(),
                 procDetails);
 
-        System.out.println(verifier.verify());
+		FutureTask<String> future = new FutureTask<>(verifier);
+		final ExecutorService service = Executors.newSingleThreadExecutor();
+		service.execute(future);
+
+		try {
+        	System.out.println(future.get(TIMEOUT, TimeUnit.SECONDS));
+		} catch (TimeoutException | ExecutionException e) {
+			System.err.println("Houdini Verifier Timeout - Sadness");
+			System.out.println("UNKNOWN");
+		}
         System.exit(0);
     }
 }

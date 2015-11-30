@@ -5,7 +5,7 @@ import candidate.CandidatePrePostCond;
 import java.util.*;
 import java.util.concurrent.*;
 
-public class HoudiniVerifier {
+public class HoudiniVerifier implements Callable<String> {
 
     private ExecutorService executor;
     private Queue<VerificationResult> results;
@@ -21,7 +21,8 @@ public class HoudiniVerifier {
         this.procDetails = procDetails;
     }
 
-    public String verify() throws InterruptedException {
+    @Override
+    public String call() throws InterruptedException {
         // Verify all procedures
         procDetails.keySet().forEach(this::verifyProc);
 
