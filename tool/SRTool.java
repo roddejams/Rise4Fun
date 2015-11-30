@@ -18,7 +18,7 @@ import java.util.concurrent.*;
 public class SRTool {
 
     private static final int POOL_SIZE = 2;
-	private static final int TIMEOUT = 30;
+	private static final int TIMEOUT = 100;
 
 	public static void main(String[] args) throws IOException, InterruptedException {
         String filename = args[0];
