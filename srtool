@@ -5,13 +5,7 @@ use warnings;
 
 my $cp = shift @ARGV;
 my $test = shift @ARGV;
-# Configurable timeout value
-my $timeout = shift @ARGV || 15;
 
-local $SIG{ALRM} = sub { print "UNKNOWN\n"; exit 0; };
-
-alarm($timeout);
 my $res = qx/java -cp $cp:$cp\/antlr-4.5.1-complete.jar:$cp\/guava-18.0.jar tool.SRTool $test/;
-alarm(0);
 
 print $res;
