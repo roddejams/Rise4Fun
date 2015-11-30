@@ -68,6 +68,7 @@ public class HoudiniVerifier implements Callable<String> {
 
                             for(String proc : procDetails.keySet()) {
                                 if(procDetails.get(proc).getCalledProcs().contains(procName)) {
+                                    clearCompletedVerifications(proc);
                                     verifyProc(proc);
                                 }
                             }
@@ -79,6 +80,7 @@ public class HoudiniVerifier implements Callable<String> {
                             for(String calledProc : procDetail.getCalledProcs()) {
                                 procDetails.get(calledProc).disableCandidates(failedPreds, procName);
                                 procDetails.get(calledProc).clearAllPreds(procName);
+                                clearCompletedVerifications(calledProc);
                                 verifyProc(calledProc);
                             }
                         }
@@ -91,6 +93,7 @@ public class HoudiniVerifier implements Callable<String> {
                             }
                         }
                         // Failed due to candidates or BMC, submit for re-verification
+                        clearCompletedVerifications(procName);
                         verifyProc(procName);
                         runningVerifications.remove(procName);
                         break;
@@ -119,6 +122,15 @@ public class HoudiniVerifier implements Callable<String> {
                 if(candidate.isEnabled()) {
                     System.err.println(candidate.getExpr());
                 }
+            }
+        }
+    }
+
+    private void clearCompletedVerifications(String proc) {
+        for(Iterator<VerificationResult> it = results.iterator(); it.hasNext();) {
+            VerificationResult result = it.next();
+            if(result.getProcName().equals(proc)) {
+                it.remove();
             }
         }
     }
