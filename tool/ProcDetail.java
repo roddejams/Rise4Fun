@@ -11,7 +11,7 @@ import java.util.*;
 //God object v2
 public class ProcDetail {
 
-    private static final int UNWINDING_INCREMENT = 1;
+    private static final int UNWINDING_INCREMENT = 5;
     private SimpleCParser.ProcedureDeclContext ctx;
     private Boolean verified;
     private List<RequiresContext> preConds;
@@ -218,6 +218,15 @@ public class ProcDetail {
         }
 
         return failures;
+    }
+
+    public boolean maxUnwindingReached() {
+        for(BMCLoopDetail loopDetail : bmcLoops.values()) {
+            if(loopDetail.maxUnwindingDepthReached()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void updateBMCLoopDetails(Set<String> failedPreds) {

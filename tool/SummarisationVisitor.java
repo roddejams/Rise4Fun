@@ -79,7 +79,7 @@ public class SummarisationVisitor extends ModsetCalculatorVisitor {
         super.visitWhileStmt(ctx);
 
         if (ctx.invariantAnnotations.isEmpty()) {
-            detail.checkWithBMC(ctx, 1);
+            detail.checkWithBMC(ctx, 10);
         }
         return null;
     }

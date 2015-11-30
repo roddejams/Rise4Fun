@@ -85,6 +85,10 @@ public class HoudiniVerifier implements Callable<String> {
                         if(failures.contains(FailureType.BMC)) {
                             procDetail.updateBMCLoopDetails(failedPreds);
                             procDetail.clearAllPreds(procName);
+
+                            if(procDetail.maxUnwindingReached()) {
+                                return "UNKNOWN";
+                            }
                         }
                         // Failed due to candidates or BMC, submit for re-verification
                         verifyProc(procName);

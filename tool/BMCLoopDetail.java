@@ -5,6 +5,7 @@ import java.util.Set;
 
 public class BMCLoopDetail {
 
+    private static final int MAX_UNWINDING_DEPTH = 100;
     private Set<String> ownedPred;
     private int unwindingDepth;
 
@@ -31,5 +32,9 @@ public class BMCLoopDetail {
 
     public void clearOwnedPred() {
         ownedPred.clear();
+    }
+
+    public boolean maxUnwindingDepthReached() {
+        return unwindingDepth >= MAX_UNWINDING_DEPTH;
     }
 }
