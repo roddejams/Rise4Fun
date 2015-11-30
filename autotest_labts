@@ -20,6 +20,7 @@ my @correct_names;
 my @incorrect_names;
 
 my @failed;
+my @unknown;
 
 # Build stuff
 qx/.\/build.sh/;
@@ -51,6 +52,10 @@ while ($i < @correct) {
         $correct++;
         print color('green');
         print "$test passed test\n";
+    } elsif ($result =~ /^UNKNOWN/m) {
+        print color('yellow');
+        print "$test is UNKNOWN\n";
+        push @unknown, $test
     } else {
         print color('red');
         print "$test failed test\n";
@@ -70,6 +75,10 @@ while ($i < @incorrect) {
         $incorrect++;
         print color('green');
         print "$test passed test\n";
+    } elsif ($result =~ /^UNKNOWN/m) {
+        print color('yellow');
+        print "$test is UNKNOWN\n";
+        push @unknown, $test
     } else {
         print color('red');
         print "$test failed test\n";
@@ -80,6 +89,9 @@ while ($i < @incorrect) {
 print color('white');
 print "CORRECT: $correct/$total_correct\n";
 print "INCORRECT: $incorrect/$total_incorrect\n";
+print "UNKNOWN: " . scalar @unknown . "\n";
 print color('red');
 print ("FAILED TESTS:\n" . join("\n", @failed) . "\n") unless ($correct eq $total_correct and $incorrect eq $total_incorrect);
+print color('yellow');
+print ("UNKNOWN TESTS:\n" . join("\n", @unknown) . "\n") unless @unknown == 0;
 print color('white');
