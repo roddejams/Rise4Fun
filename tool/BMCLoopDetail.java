@@ -5,7 +5,7 @@ import java.util.Set;
 
 public class BMCLoopDetail {
 
-    private static final int MAX_UNWINDING_DEPTH = 100;
+    private static final int MAX_UNWINDING_DEPTH = 1000;
     private Set<String> ownedPred;
     private int unwindingDepth;
 
