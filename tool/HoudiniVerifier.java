@@ -42,17 +42,8 @@ public class HoudiniVerifier implements Callable<String> {
                         procDetail.clearAllPreds(procName);
                         break;
                     case "CORRECT":
-                        if(procDetail.hasUnsoundBMC()) {
-                            procDetail.clearAllPreds(procName);
-                            clearCompletedVerifications(procName);
-                            // Pass an empty hash set because it needs a set of failed preds (ew)
-                            procDetail.updateBMCLoopDetails();
-                            // Try more unwinding / sound BMC if the threshold is reached
-                            verifyProc(procName);
-                        } else {
-                            procDetail.setVerified();
-                            runningVerifications.remove(procName);
-                        }
+                        procDetail.setVerified();
+                        runningVerifications.remove(procName);
                         break;
                     case "UNKNOWN":
                         return "UNKNOWN";
@@ -93,8 +84,13 @@ public class HoudiniVerifier implements Callable<String> {
                                 verifyProc(calledProc);
                             }
                         }
-                        if(failures.contains(FailureType.SOUND_BMC)) {
-                            return "UNKNOWN";
+                        if(failures.contains(FailureType.BMC)) {
+                            procDetail.updateBMCLoopDetails(failedPreds);
+                            procDetail.clearAllPreds(procName);
+
+                            if(procDetail.maxUnwindingReached()) {
+                                return "UNKNOWN";
+                            }
                         }
                         // Failed due to candidates or BMC, submit for re-verification
                         clearCompletedVerifications(procName);

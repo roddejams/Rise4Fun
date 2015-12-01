@@ -8,12 +8,10 @@ public class BMCLoopDetail {
     private static final int MAX_UNWINDING_DEPTH = 100;
     private Set<String> ownedPred;
     private int unwindingDepth;
-    private boolean unsound;
 
     public BMCLoopDetail(int unwindingDepth) {
         this.unwindingDepth = unwindingDepth;
         ownedPred = new HashSet<>();
-        unsound = true;
     }
 
     public void addOwnedPred(String ownedPred) {
@@ -22,8 +20,6 @@ public class BMCLoopDetail {
 
     public void incUnwindingDepth(int inc) {
         unwindingDepth += inc;
-        // Give up with unsound, has a punt at sound if we reach the threshold
-        unsound = unwindingDepth < MAX_UNWINDING_DEPTH;
     }
 
     public Set<String> getOwnedPred() {
@@ -38,7 +34,7 @@ public class BMCLoopDetail {
         ownedPred.clear();
     }
 
-    public boolean isUnsound() {
-        return unsound;
+    public boolean maxUnwindingDepthReached() {
+        return unwindingDepth >= MAX_UNWINDING_DEPTH;
     }
 }

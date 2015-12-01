@@ -1,7 +1,7 @@
 package tool;
 
 public enum FailureType {
-    SOUND_BMC,
+    BMC,
     CANDIDATE_INVARIANT,
     CANDIDATE_PRE,
     CANDIDATE_POST,
