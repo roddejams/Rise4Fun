@@ -607,12 +607,14 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
 
             predicates.push(cond);
 
-            // assert false indicating the end of unwinding depth
-            String assertFalsePred = String.format("(=> (and %s %s) %s)",
-                    buildAssumptions(), buildPredicate(), "false");
-            String nextAssertId = getNextAssertPred();
-            asserts.add(new Assertion(assertFalsePred, nextAssertId));
-            detail.addOwnedPred(nextAssertId);
+            if (!detail.isUnsound()) {
+                // assert false indicating the end of unwinding depth
+                String assertFalsePred = String.format("(=> (and %s %s) %s)",
+                        buildAssumptions(), buildPredicate(), "false");
+                String nextAssertId = getNextAssertPred();
+                asserts.add(new Assertion(assertFalsePred, nextAssertId));
+                detail.addOwnedPred(nextAssertId);
+            }
 
             // add assume false and block further execution
             String assumeFalse = String.format("(=> %s %s)", buildPredicate(), "false");

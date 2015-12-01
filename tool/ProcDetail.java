@@ -211,7 +211,7 @@ public class ProcDetail {
             }
             for (BMCLoopDetail bmcLoopDet : bmcLoops.values()) {
                 if (bmcLoopDet.getOwnedPred().contains(failedPred)) {
-                    failures.add(FailureType.BMC);
+                    failures.add(FailureType.SOUND_BMC);
                     it.remove();
                 }
             }
@@ -220,22 +220,10 @@ public class ProcDetail {
         return failures;
     }
 
-    public boolean maxUnwindingReached() {
-        for(BMCLoopDetail loopDetail : bmcLoops.values()) {
-            if(loopDetail.maxUnwindingDepthReached()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public void updateBMCLoopDetails(Set<String> failedPreds) {
+    public void updateBMCLoopDetails() {
         for (BMCLoopDetail bmcLoopDet : bmcLoops.values()) {
-            for(String ownedPred : bmcLoopDet.getOwnedPred()) {
-                if (failedPreds.contains(ownedPred)) {
-                    bmcLoopDet.incUnwindingDepth(UNWINDING_INCREMENT);
-                    break;
-                }
+            if (bmcLoopDet.isUnsound()) {
+                bmcLoopDet.incUnwindingDepth(UNWINDING_INCREMENT);
             }
         }
     }
@@ -273,5 +261,14 @@ public class ProcDetail {
         result = 31 * result + (candidateInvariants != null ? candidateInvariants.hashCode() : 0);
         result = 31 * result + (bmcLoops != null ? bmcLoops.hashCode() : 0);
         return result;
+    }
+
+    public boolean hasUnsoundBMC() {
+        for(BMCLoopDetail bmcLoop : bmcLoops.values()) {
+            if (bmcLoop.isUnsound()) {
+                return true;
+            }
+        }
+        return false;
     }
 }
