@@ -472,6 +472,8 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         String expr = "";
         ProcDetail details = procDetails.get(ctx.callee.getText());
 
+        Map<String, Integer> savedOldGlobals = copyMap(oldGlobals);
+
         assert details.getArgs().size() == ctx.actuals.size();
 
         for(int i = 0; i < ctx.actuals.size(); i++) {
@@ -480,6 +482,12 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         }
 
         inCallSummarisation = true;
+
+        //Bring old global map up to date
+        for(String global : globals) {
+            oldGlobals.put(global, mapping.get(global));
+        }
+
         //visit precondition with arguments replaced with actuals
         details.getPreConds().forEach(this::visit);
         details.getCandidateRequires().keySet().forEach(req -> addCandidateRequires(req, ctx.callee.getText()));
@@ -512,6 +520,8 @@ public class SMTGeneratorVisitor extends SimpleCBaseVisitor<String> {
         functionArgumentMap.clear();
         inCallSummarisation = false;
 
+        //Reset old values
+        oldGlobals = copyMap(savedOldGlobals);
         return expr;
     }
 
